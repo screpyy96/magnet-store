@@ -25,7 +25,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <HiTruck className="h-5 w-5" />
-            <span className="text-sm font-medium">Livrare gratuită la comenzi peste 200 RON</span>
+            <span className="text-sm font-medium">Free Shipping on orders over £50</span>
           </div>
           <Link href="/cart" className="relative">
             <HiShoppingCart className="h-6 w-6 text-white" />
