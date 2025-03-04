@@ -55,7 +55,7 @@ export default function RootLayout({ children }) {
       <body className={`${inter.className} flex flex-col min-h-screen`}>
         <AuthProvider>
           <Navbar />
-          <main className="flex-grow pt-16 sm:pt-16 mt-[42px] sm:mt-0">
+          <main className="flex-grow">
             {children}
           </main>
           <Footer />
