@@ -4,7 +4,17 @@ import { NextResponse } from 'next/server'
 export async function middleware(request) {
   const response = NextResponse.next()
   
-  const supabase = createMiddlewareClient({ request, response })
+  const supabase = createMiddlewareClient(
+    { 
+      request, 
+      response 
+    },
+    {
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    }
+  )
+  
   const { data: { session } } = await supabase.auth.getSession()
 
   // Check auth condition
@@ -28,7 +38,7 @@ export async function middleware(request) {
 
 export const config = {
   matcher: [
-    '/custom',
+    
     '/profile',
     '/orders',
     '/login',
