@@ -86,73 +86,82 @@ export default function ImageEditor({ file, onSave, onCancel }) {
   if (!imgSrc) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-4xl flex flex-col h-[90vh]">
-        <div className="flex-none">
-          <h3 className="text-lg font-semibold mb-2">Position Your Image</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Move the image to position it within the 5x5 cm square area.
+    <div className="fixed inset-0 bg-black/80 z-[9999] overflow-y-auto">
+      <div className="min-h-screen px-4 py-8 flex items-center justify-center">
+        <div className="bg-white rounded-2xl p-4 w-full max-w-lg relative">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold">Position Your Image</h3>
+            <button
+              onClick={onCancel}
+              className="text-gray-400 hover:text-gray-500"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <p className="text-sm text-gray-500 mb-2">
+            Move and resize the image to fit within the 5x5 cm square area.
           </p>
-        </div>
-        
-        <div className="flex-1 min-h-0 relative mb-4">
-          <div className="absolute inset-0 flex items-center justify-center overflow-auto">
-            <div className="relative" style={{ maxHeight: '100%', maxWidth: '100%' }}>
+
+          <div className="bg-gray-50 rounded-xl p-2 mb-3">
+            <div className="flex items-center justify-center" style={{ height: '280px' }}>
               <ReactCrop
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
                 onComplete={(c) => setCompletedCrop(c)}
                 aspect={1}
                 locked
+                className="rounded-lg overflow-hidden max-h-full"
               >
                 <img
                   ref={imgRef}
                   src={imgSrc}
                   alt="Crop me"
-                  style={{
-                    maxHeight: 'calc(80vh - 200px)',
-                    width: 'auto',
-                    objectFit: 'contain'
-                  }}
+                  className="max-h-[260px] w-auto object-contain"
                 />
               </ReactCrop>
             </div>
           </div>
-        </div>
 
-        {previewUrl && (
-          <div className="flex-none mb-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Preview:</h4>
-            <div className="flex gap-4 items-center">
-              <div className="w-24 h-24 border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                <img 
-                  src={previewUrl} 
-                  alt="Square preview" 
-                  className="w-full h-full object-cover"
-                />
+          {previewUrl && (
+            <div className="bg-gray-50 rounded-xl p-2 mb-3">
+              <div className="flex gap-3 items-center">
+                <div className="w-14 h-14 border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                  <img 
+                    src={previewUrl} 
+                    alt="Square preview" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="text-xs text-gray-500">
+                  <p>Final size: 5x5 cm</p>
+                  <p>Resolution: {MAGNET_SIZE_PX}x{MAGNET_SIZE_PX}px</p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="flex-none flex justify-end space-x-2">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!completedCrop}
-            className={`px-4 py-2  ${
-              completedCrop 
-                ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            Save
-          </button>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!completedCrop}
+              className={`px-4 py-2 rounded-xl text-sm font-medium ${
+                completedCrop 
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700' 
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              Save Magnet
+            </button>
+          </div>
         </div>
       </div>
     </div>

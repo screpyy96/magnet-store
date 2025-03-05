@@ -5,6 +5,8 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import { selectCartItems, selectCartTotalAmount, removeItem, updateQuantity } from '@/store/cartSlice'
 import Link from 'next/link'
+import { useToast } from '@/contexts/ToastContext'
+import { useRouter } from 'next/navigation'
 
 export default function Cart() {
   const [isOpen, setIsOpen] = useState(false)
@@ -12,6 +14,8 @@ export default function Cart() {
   const totalAmount = useSelector(selectCartTotalAmount)
   const dispatch = useDispatch()
   const cartRef = useRef(null)
+  const { showToast } = useToast()
+  const router = useRouter()
 
   // Close cart when clicking outside
   useEffect(() => {
@@ -25,23 +29,32 @@ export default function Cart() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const handleCheckout = () => {
+    setIsOpen(false)
+    router.push('/checkout')
+  }
+
   const handleQuantityChange = (index, newQuantity) => {
     if (newQuantity < 1) return
     dispatch(updateQuantity({ index, quantity: parseInt(newQuantity) }))
+    showToast('Quantity updated successfully', 'success')
   }
 
   const handleIncrement = (index, quantity) => {
     dispatch(updateQuantity({ index, quantity: quantity + 1 }))
+    showToast('Quantity increased', 'success')
   }
 
   const handleDecrement = (index, quantity) => {
     if (quantity > 1) {
       dispatch(updateQuantity({ index, quantity: quantity - 1 }))
+      showToast('Quantity decreased', 'success')
     }
   }
 
   const handleRemove = (index) => {
     dispatch(removeItem(index))
+    showToast('Item removed from cart', 'success')
   }
 
   return (
@@ -83,7 +96,7 @@ export default function Cart() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="fixed top-0 right-0 h-[100dvh] w-full sm:absolute sm:w-[420px] sm:h-auto sm:top-full sm:mt-2 sm:right-0 bg-white shadow-2xl sm:rounded-xl border-l sm:border border-gray-200/50 overflow-hidden"
+              className="fixed top-0 right-0 h-[calc(100vh-5rem)] w-full sm:absolute sm:w-[420px] sm:h-auto sm:top-full sm:mt-2 sm:right-0 bg-white shadow-2xl sm:rounded-xl border-l sm:border border-gray-200/50 overflow-hidden"
             >
               <div className="flex flex-col h-full">
                 <div className="p-4 border-b border-gray-200 bg-white sticky top-0 z-10 flex justify-between items-center">
@@ -110,7 +123,7 @@ export default function Cart() {
                       <p className="text-sm text-gray-400">Add some magnets to get started!</p>
                     </div>
                   ) : (
-                    <div className="p-4 space-y-3">
+                    <div className="p-4 space-y-3 mb-32 sm:mb-0">
                       {items.map((item, index) => (
                         <div key={index} className="flex items-center space-x-4 bg-gray-50/80 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                           <div className="w-16 h-16 relative rounded-md overflow-hidden border border-gray-200 bg-white shrink-0">
@@ -166,18 +179,17 @@ export default function Cart() {
                   )}
                 </div>
 
-                <div className="p-4 border-t border-gray-200 bg-white mt-auto">
+                <div className="p-4 border-t border-gray-200 bg-white absolute bottom-0 left-0 right-0 sm:relative">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-gray-600">Total:</span>
                     <span className="text-xl font-semibold text-gray-900">£{totalAmount.toFixed(2)}</span>
                   </div>
-                  <Link
-                    href="/checkout"
+                  <button
+                    onClick={handleCheckout}
                     className="block w-full bg-indigo-600 text-white text-center py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-                    onClick={() => setIsOpen(false)}
                   >
                     Checkout
-                  </Link>
+                  </button>
                 </div>
               </div>
             </motion.div>

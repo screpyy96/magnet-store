@@ -11,6 +11,13 @@ export function AuthProvider({ children }) {
   const supabase = createClientComponentClient()
 
   useEffect(() => {
+    // Check session first
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setIsLoading(false)
+    })
+
+    // Then listen for changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -19,7 +26,7 @@ export function AuthProvider({ children }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [supabase])
 
   const signIn = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -51,6 +58,11 @@ export function AuthProvider({ children }) {
     signIn,
     signInWithGoogle,
     signOut,
+  }
+
+  // Don't render children until we have checked the session
+  if (isLoading) {
+    return null
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -16,7 +16,7 @@ export default function ImageUploader({ onFileChange }) {
   });
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+    <div className="bg-white rounded-2xl shadow-lg p-2 md:p-4">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Upload Your Images</h2>
       
       <div

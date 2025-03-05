@@ -13,7 +13,10 @@ export const cartSlice = createSlice({
     addItem: (state, action) => {
       const newItem = {
         ...action.payload,
-        file: undefined // Don't store the Blob in Redux
+        // Ensure we only store serializable data
+        fileData: action.payload.fileData,
+        quantity: action.payload.quantity,
+        price: action.payload.price
       }
       state.items.push(newItem)
       state.totalQuantity += newItem.quantity

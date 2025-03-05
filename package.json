@@ -9,12 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.0",
     "@reduxjs/toolkit": "^2.6.0",
     "@supabase/auth-helpers-nextjs": "^0.8.7",
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.39.8",
     "framer-motion": "^12.4.10",
-    "next": "15.2.1",
+    "next": "^15.2.1",
     "next-seo": "^6.6.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

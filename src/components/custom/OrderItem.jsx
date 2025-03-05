@@ -12,7 +12,9 @@ export default function OrderItem({ item, index, onQuantityChange, onRemove }) {
   }
 
   const handleDecrement = () => {
-    if (item.quantity > 1) {
+    if (item.quantity <= 1) {
+      onRemove(index)
+    } else {
       onQuantityChange(index, item.quantity - 1)
     }
   }
@@ -54,7 +56,14 @@ export default function OrderItem({ item, index, onQuantityChange, onRemove }) {
                   type="number"
                   min="1"
                   value={item.quantity}
-                  onChange={(e) => onQuantityChange(index, parseInt(e.target.value) || 1)}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 0
+                    if (value === 0) {
+                      onRemove(index)
+                    } else {
+                      onQuantityChange(index, value)
+                    }
+                  }}
                   className="w-16 h-10 border-y border-gray-300 text-center text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
