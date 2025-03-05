@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
 import { useDispatch, useSelector } from 'react-redux'
-import { addItem, removeItem, updateQuantity, selectCartItems } from '@/store/cartSlice'
+import { addItem, removeItem, updateQuantity, selectCartItems, clearCart } from '@/store/cartSlice'
 import ImageUploader from '@/components/custom/ImageUploader'
 import OrderItem from '@/components/custom/OrderItem'
 import OrderSummary from '@/components/custom/OrderSummary'
@@ -177,52 +177,123 @@ export default function Custom() {
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 space-y-6 mt-16">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-8 md:p-12">
-          <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
-          <div className="relative text-center space-y-6">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">
-              Create Your Custom Magnets
-            </h1>
-            <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto leading-relaxed">
-              Transform your favorite photos into beautiful square fridge magnets.
-              <span className="block mt-2 text-white font-medium">
-                Each magnet costs £{MAGNET_PRICE}
-              </span>
-            </p>
-          </div>
+      {/* Hero Section - Modern & Elegant */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800">
+        {/* Animated particles/dots overlay */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{ 
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 20.83l2.83-2.83 1.41 1.41L1.41 22.24H0v-1.41zM0 3.07l2.83-2.83 1.41 1.41L1.41 4.48H0V3.07zm28.24 35.52l2.83-2.83 1.41 1.41-2.83 2.83h-1.41v-1.41zm0-17.76l2.83-2.83 1.41 1.41-2.83 2.83h-1.41v-1.41zm0-17.76l2.83-2.83 1.41 1.41-2.83 2.83h-1.41V3.07zM20 39.8l2.83-2.83 1.41 1.41L21.41 41H20v-1.2zm0-17.77l2.83-2.83 1.41 1.41-2.83 2.83H20v-1.41zm0-17.76l2.83-2.83 1.41 1.41-2.83 2.83H20V4.27z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundSize: '50px 50px',
+            animation: 'slide 20s linear infinite'
+          }}></div>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl">
-            {error}
-          </div>
-        )}
         
-        <div className="bg-white/50 backdrop-blur-sm rounded-3xl border border-purple-100 p-8 shadow-xl">
-          <ImageUploader onFileChange={handleFileChange} />
-        </div>
-
-        {orderItems.length > 0 && (
-          <div className="bg-white/50 backdrop-blur-sm rounded-3xl border border-purple-100 p-8 shadow-xl space-y-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center">Your Order</h2>
-            <AnimatePresence>
-              {orderItems.map((item, index) => (
-                <OrderItem
-                  key={index}
-                  item={item}
-                  index={index}
-                  onQuantityChange={handleQuantityChange}
-                  onRemove={handleRemoveItem}
-                />
-              ))}
-            </AnimatePresence>
+        {/* Glowing orbs/blurs for depth */}
+        <div className="absolute top-0 left-10 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob"></div>
+        <div className="absolute top-0 right-10 w-72 h-72 bg-yellow-500 rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-20 left-1/3 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob animation-delay-4000"></div>
+        
+        <style jsx>{`
+          @keyframes slide {
+            0% { background-position: 0 0; }
+            100% { background-position: 50px 50px; }
+          }
+          @keyframes blob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0px, 0px) scale(1); }
+          }
+          .animate-blob {
+            animation: blob 7s infinite;
+          }
+          .animation-delay-2000 {
+            animation-delay: 2s;
+          }
+          .animation-delay-4000 {
+            animation-delay: 4s;
+          }
+        `}</style>
+        
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 py-16 md:py-24 text-center">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight drop-shadow-sm">
+            <span className="block">Transform Your Photos Into</span>
+            <span className="block mt-1 text-transparent bg-clip-text bg-gradient-to-r from-pink-200 to-cyan-200">
+              Stunning Magnets
+            </span>
+          </h1>
+          
+          <p className="mt-4 text-lg md:text-xl text-indigo-100 max-w-2xl mx-auto leading-relaxed">
+            Create high-quality custom magnets from your favorite memories.
+            Perfect for gifts, events, or decorating your home.
+          </p>
+          
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={() => document.querySelector('input[type="file"]')?.click()}
+              className="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-full shadow-lg bg-white text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 transition duration-200 transform hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <svg className="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
+              </svg>
+              Upload Your Photo
+            </button>
             
-            <OrderSummary
-              totalPrice={totalPrice}
-              onSubmit={() => router.push('/checkout')}
-              isLoading={isLoading}
-            />
+            <div className="inline-flex items-center justify-center px-5 py-3 rounded-full bg-indigo-800/40 backdrop-blur-sm border border-indigo-500/30 text-white">
+              <span className="mr-2 text-indigo-200">Each magnet:</span>
+              <span className="text-lg font-bold">£{MAGNET_PRICE}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content - More Compact Layout */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        {/* Upload Area */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+          <div className="p-6">
+        
+            <ImageUploader onFileChange={handleFileChange} />
+            {error && (
+              <div className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl">
+                {error}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Order Items */}
+        {orderItems.length > 0 && (
+          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Your Order</h2>
+                <button 
+                  onClick={() => dispatch(clearCart())} 
+                  className="text-sm text-red-500 hover:text-red-700"
+                >
+                  Clear All
+                </button>
+              </div>
+              
+              <AnimatePresence>
+                {orderItems.map((item, index) => (
+                  <OrderItem
+                    key={index}
+                    item={item}
+                    index={index}
+                    onQuantityChange={handleQuantityChange}
+                    onRemove={handleRemoveItem}
+                  />
+                ))}
+              </AnimatePresence>
+              
+              <OrderSummary
+                totalPrice={totalPrice}
+                onSubmit={() => router.push('/checkout')}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
         )}
       </div>

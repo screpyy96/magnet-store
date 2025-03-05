@@ -64,6 +64,9 @@ export default function Navbar() {
                 <Link href="/about" className="text-gray-700 hover:text-indigo-600 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-indigo-600">
                   About
                 </Link>
+                <Link href="/contact" className="text-gray-700 hover:text-indigo-600 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-indigo-600">
+                  Contact
+                </Link>
               </div>
             </div>
 
