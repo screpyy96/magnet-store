@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function ForgotPassword() {
   const router = useRouter()
+  const { resetPassword } = useAuth()
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -19,16 +20,15 @@ export default function ForgotPassword() {
     setSuccessMessage('')
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
-      })
+      const { error } = await resetPassword(email)
 
       if (error) throw error
 
       setSuccessMessage('Check your email for the password reset link!')
       setEmail('')
     } catch (error) {
-      setError(error.message)
+      console.error('Password reset error:', error)
+      setError(error.message || 'Failed to send reset link. Please try again.')
     } finally {
       setIsLoading(false)
     }

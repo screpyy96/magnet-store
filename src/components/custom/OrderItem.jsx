@@ -1,108 +1,90 @@
-import Image from 'next/image';
-import { motion } from 'framer-motion';
+'use client'
 
-export default function OrderItem({ 
-  item, 
-  index, 
-  magnetOptions, 
-  onQuantityChange, 
-  onSizeChange, 
-  onRequirementsChange, 
-  onRemove 
-}) {
+import { motion } from 'framer-motion'
+import { useEffect } from 'react'
+
+export default function OrderItem({ item, index, onQuantityChange, onRemove }) {
+  // Use fileData directly since we're not storing the Blob in Redux
+  const imageUrl = item.fileData
+
+  const handleIncrement = () => {
+    onQuantityChange(index, item.quantity + 1)
+  }
+
+  const handleDecrement = () => {
+    if (item.quantity > 1) {
+      onQuantityChange(index, item.quantity - 1)
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+      className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200"
     >
-      <div className="p-6">
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Image Preview */}
-          <div className="relative w-full md:w-48 h-48 md:h-full">
-            <div className="relative w-full h-full rounded-lg overflow-hidden">
-              <Image
-                src={URL.createObjectURL(item.file)}
-                alt={`Preview ${index + 1}`}
-                fill
-                className="object-cover"
-              />
-            </div>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+        {/* Image */}
+        <div className="w-full sm:w-24 h-48 sm:h-24 relative rounded-lg overflow-hidden border border-gray-200">
+          <img
+            src={imageUrl}
+            alt="Magnet preview"
+            className="w-full h-full object-contain sm:object-cover"
+          />
+        </div>
 
-          {/* Order Details */}
-          <div className="flex-1 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Size Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Size
-                </label>
-                <select
-                  value={item.size}
-                  onChange={(e) => onSizeChange(index, e.target.value)}
-                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+        {/* Controls */}
+        <div className="flex-grow">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="w-full sm:w-32">
+              <label className="block text-sm font-medium text-gray-700 mb-2 text-center sm:text-left">
+                Quantity
+              </label>
+              <div className="flex items-center justify-center sm:justify-start">
+                <button
+                  onClick={handleDecrement}
+                  className="w-10 h-10 rounded-l-md border border-gray-300 flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
-                  {magnetOptions.map((option) => (
-                    <option key={option.id} value={option.size}>
-                      {option.size.charAt(0).toUpperCase() + option.size.slice(1)} ({option.dimensions})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Quantity Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quantity
-                </label>
+                  <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                  </svg>
+                </button>
                 <input
                   type="number"
                   min="1"
                   value={item.quantity}
-                  onChange={(e) => onQuantityChange(index, e.target.value)}
-                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  onChange={(e) => onQuantityChange(index, parseInt(e.target.value) || 1)}
+                  className="w-16 h-10 border-y border-gray-300 text-center text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 [-moz-appearance:_textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
-              </div>
-
-              {/* Price Display */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price
-                </label>
-                <div className="text-2xl font-bold text-indigo-600">
-                  £{(item.price * item.quantity).toFixed(2)}
-                </div>
+                <button
+                  onClick={handleIncrement}
+                  className="w-10 h-10 rounded-r-md border border-gray-300 flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
               </div>
             </div>
 
-            {/* Special Requirements */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Special Requirements
-              </label>
-              <textarea
-                value={item.specialRequirements}
-                onChange={(e) => onRequirementsChange(index, e.target.value)}
-                rows={2}
-                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                placeholder="Any special instructions for this magnet?"
-              />
+            <div className="text-center sm:text-left">
+              <p className="text-sm font-medium text-gray-700 mb-1">Price</p>
+              <p className="text-lg font-semibold">£{(item.price * item.quantity).toFixed(2)}</p>
             </div>
           </div>
-
-          {/* Remove Button */}
-          <button
-            onClick={() => onRemove(index)}
-            className="absolute top-4 right-4 text-gray-400 hover:text-red-600 transition-colors duration-200"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
+
+        {/* Remove button */}
+        <button
+          onClick={() => onRemove(index)}
+          className="absolute top-3 right-3 text-red-600 hover:text-red-800 transition-colors bg-white rounded-full p-2 hover:bg-red-50"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
     </motion.div>
-  );
+  )
 } 

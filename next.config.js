@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['images.unsplash.com'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -12,7 +11,7 @@ const nextConfig = {
     ],
   },
   experimental: {
-    turbo: false
+    // Remove turbo flag as it's causing warnings
   }
 }
 

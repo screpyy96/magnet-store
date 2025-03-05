@@ -1,21 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { FcGoogle } from 'react-icons/fc'
-import { supabase } from '@/lib/supabase'
 
 export default function Login() {
   const router = useRouter()
-  const { signIn } = useAuth()
+  const searchParams = useSearchParams()
+  const { signIn, signInWithGoogle } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [successMessage, setSuccessMessage] = useState('')
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   })
+
+  // Check for error or message in URL
+  useEffect(() => {
+    const errorMsg = searchParams.get('error')
+    const message = searchParams.get('message')
+    
+    if (errorMsg) {
+      setError(decodeURIComponent(errorMsg))
+    }
+    
+    if (message) {
+      setSuccessMessage(decodeURIComponent(message))
+    }
+  }, [searchParams])
 
   const handleChange = (e) => {
     setFormData({
@@ -28,18 +43,34 @@ export default function Login() {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+    setSuccessMessage('')
 
     try {
-      const { error } = await signIn({
+      console.log('Attempting to sign in with:', { email: formData.email })
+      
+      // Create a simpler signin object
+      const signInData = {
         email: formData.email,
         password: formData.password,
-      })
+      };
+      
+      console.log('Sign in data:', signInData);
+      
+      const { error } = await signIn(signInData);
 
-      if (error) throw error
+      if (error) {
+        console.error('Login error details:', error)
+        throw error
+      }
 
-      router.push('/dashboard')
+      console.log('Login successful, redirecting...');
+
+      // Redirect to home page or previous page
+      const redirectTo = searchParams.get('redirectTo') || '/'
+      router.push(redirectTo)
     } catch (error) {
-      setError(error.message)
+      console.error('Login error:', error)
+      setError(error.message || 'Failed to sign in. Please check your credentials and try again.')
     } finally {
       setIsLoading(false)
     }
@@ -47,15 +78,20 @@ export default function Login() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: 'https://wucwlqxuqgusthpllkgd.supabase.co/auth/v1/callback'
-        }
-      })
-      if (error) throw error
+      setIsLoading(true)
+      setError(null)
+      
+      console.log('Attempting to sign in with Google');
+      
+      // The signInWithGoogle function will redirect to Google
+      // No need to handle the response here as the redirect will happen automatically
+      await signInWithGoogle();
+      
+      // This code will not execute due to the redirect
     } catch (error) {
-      setError(error.message)
+      console.error('Google sign in failed:', error)
+      setError(error.message || 'Failed to sign in with Google. Please try again.')
+      setIsLoading(false)
     }
   }
 
@@ -77,6 +113,12 @@ export default function Login() {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
             {error}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md">
+            {successMessage}
           </div>
         )}
 

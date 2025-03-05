@@ -1,15 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { FcGoogle } from 'react-icons/fc'
-import { supabase } from '@/lib/supabase'
 
 export default function Register() {
   const router = useRouter()
-  const { signUp } = useAuth()
+  const searchParams = useSearchParams()
+  const { signUp, signInWithGoogle } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [formData, setFormData] = useState({
@@ -17,6 +17,14 @@ export default function Register() {
     password: '',
     confirmPassword: '',
   })
+
+  // Check for error in URL
+  useEffect(() => {
+    const errorMsg = searchParams.get('error')
+    if (errorMsg) {
+      setError(decodeURIComponent(errorMsg))
+    }
+  }, [searchParams])
 
   const handleChange = (e) => {
     setFormData({
@@ -37,27 +45,27 @@ export default function Register() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      console.log('Attempting to sign up with:', { email: formData.email })
+      
+      // Simplify the signup data
+      const { data, error } = await signUp({
         email: formData.email,
-        password: formData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            full_name: '',
-            phone: '',
-            address: ''
-          }
-        }
-      })
+        password: formData.password
+      });
 
-      if (error) throw error
+      if (error) {
+        console.error('Registration error details:', error)
+        throw error
+      }
+
+      console.log('Registration successful:', data);
 
       // Show success message and redirect
       alert('Check your email for the confirmation link!')
-      router.push('/login')
+      router.push('/login?message=' + encodeURIComponent('Registration successful! Please check your email for the confirmation link.'))
     } catch (error) {
       console.error('Registration error:', error)
-      setError(error.message)
+      setError(error.message || 'Failed to register. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -65,15 +73,26 @@ export default function Register() {
 
   const handleGoogleSignUp = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: 'https://wucwlqxuqgusthpllkgd.supabase.co/auth/v1/callback'
-        }
-      })
-      if (error) throw error
+      setIsLoading(true)
+      setError(null)
+      
+      console.log('Attempting to sign up with Google');
+      
+      const { data, error } = await signInWithGoogle();
+      
+      console.log('Google sign up result:', { data, error });
+      
+      if (error) {
+        console.error('Google sign up error:', error)
+        throw error
+      }
+      
+      // No need to redirect here as the OAuth flow will handle it
     } catch (error) {
-      setError(error.message)
+      console.error('Google sign up failed:', error)
+      setError(error.message || 'Failed to sign up with Google. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
   }
 

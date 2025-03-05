@@ -2,152 +2,78 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
-import PriceGuide from '@/components/custom/PriceGuide'
+import { useDispatch, useSelector } from 'react-redux'
+import { addItem, removeItem, updateQuantity, selectCartItems } from '@/store/cartSlice'
 import ImageUploader from '@/components/custom/ImageUploader'
 import OrderItem from '@/components/custom/OrderItem'
 import OrderSummary from '@/components/custom/OrderSummary'
+import ImageEditor from '@/components/custom/ImageEditor'
 
-export default function CustomOrder() {
-  const { user } = useAuth()
-  const [magnetOptions, setMagnetOptions] = useState([])
-  const [selectedFiles, setSelectedFiles] = useState([])
+const MAGNET_PRICE = 9.99
+
+export default function Custom() {
+  const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
+  const [currentEditingFile, setCurrentEditingFile] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [orderItems, setOrderItems] = useState([])
-  const [totalPrice, setTotalPrice] = useState(0)
+  
+  const dispatch = useDispatch()
+  const orderItems = useSelector(selectCartItems)
+  const totalPrice = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
+  // Improved auth check
   useEffect(() => {
-    fetchMagnetOptions()
-  }, [])
-
-  useEffect(() => {
-    calculateTotalPrice()
-  }, [orderItems])
-
-  const fetchMagnetOptions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('magnet_options')
-        .select('*')
-        .eq('is_active', true)
-        .order('price')
-
-      if (error) throw error
-      setMagnetOptions(data)
-    } catch (error) {
-      console.error('Error fetching magnet options:', error)
-      setError('Failed to load magnet options')
+    if (!authLoading && !user) {
+      router.push('/login?redirect=/custom')
     }
-  }
+  }, [user, authLoading, router])
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files)
-    setSelectedFiles(prevFiles => [...prevFiles, ...files])
+    setCurrentEditingFile(files[0])
+  }
 
-    const newOrderItems = files.map(file => ({
-      file,
-      size: 'medium',
+  const handleCroppedImage = async (croppedBlob) => {
+    // Convert Blob to base64 for storage
+    const reader = new FileReader()
+    const base64Data = await new Promise((resolve) => {
+      reader.onloadend = () => resolve(reader.result)
+      reader.readAsDataURL(croppedBlob)
+    })
+
+    const newOrderItem = {
+      file: croppedBlob,
+      fileData: base64Data,
       quantity: 1,
-      specialRequirements: '',
-      price: magnetOptions.find(opt => opt.size === 'medium')?.price || 0
-    }))
+      price: MAGNET_PRICE
+    }
 
-    setOrderItems(prevItems => [...prevItems, ...newOrderItems])
+    dispatch(addItem(newOrderItem))
+    setCurrentEditingFile(null)
   }
 
   const handleQuantityChange = (index, value) => {
-    const newItems = [...orderItems]
-    newItems[index].quantity = parseInt(value)
-    setOrderItems(newItems)
+    const newQuantity = parseInt(value)
+    if (newQuantity < 1) return
+    dispatch(updateQuantity({ index, quantity: newQuantity }))
   }
 
-  const handleSizeChange = (index, size) => {
-    const newItems = [...orderItems]
-    newItems[index].size = size
-    newItems[index].price = magnetOptions.find(opt => opt.size === size)?.price || 0
-    setOrderItems(newItems)
+  const handleRemoveItem = (index) => {
+    dispatch(removeItem(index))
   }
 
-  const handleRequirementsChange = (index, value) => {
-    const newItems = [...orderItems]
-    newItems[index].specialRequirements = value
-    setOrderItems(newItems)
-  }
-
-  const calculateTotalPrice = () => {
-    const total = orderItems.reduce((sum, item) => {
-      return sum + (item.price * item.quantity)
-    }, 0)
-    setTotalPrice(total)
-  }
-
-  const handleSubmitOrder = async () => {
-    if (!user) {
-      setError('Please sign in to place an order')
-      return
-    }
-
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          user_id: user.id,
-          total_price: totalPrice,
-          status: 'pending'
-        }])
-        .select()
-        .single()
-
-      if (orderError) throw orderError
-
-      for (const item of orderItems) {
-        const fileExt = item.file.name.split('.').pop()
-        const fileName = `${Math.random()}.${fileExt}`
-        const filePath = `${user.id}/${order.id}/${fileName}`
-
-        const { error: uploadError } = await supabase.storage
-          .from('magnet-images')
-          .upload(filePath, item.file)
-
-        if (uploadError) throw uploadError
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('magnet-images')
-          .getPublicUrl(filePath)
-
-        const { error: itemError } = await supabase
-          .from('order_items')
-          .insert([{
-            order_id: order.id,
-            image_url: publicUrl,
-            quantity: item.quantity,
-            size: item.size,
-            price_per_unit: item.price,
-            special_requirements: item.specialRequirements
-          }])
-
-        if (itemError) throw itemError
-      }
-
-      setSelectedFiles([])
-      setOrderItems([])
-      alert('Order placed successfully!')
-    } catch (error) {
-      console.error('Error submitting order:', error)
-      setError('Failed to submit order. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const removeItem = (index) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
-    setOrderItems(prev => prev.filter((_, i) => i !== index))
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -155,7 +81,7 @@ export default function CustomOrder() {
       <div className="text-center">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">Create Your Custom Magnets</h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Transform your favorite photos into beautiful fridge magnets. Perfect for preserving memories or giving unique gifts.
+          Transform your favorite photos into beautiful square fridge magnets. Each magnet costs £{MAGNET_PRICE}.
         </p>
       </div>
 
@@ -164,10 +90,16 @@ export default function CustomOrder() {
           {error}
         </div>
       )}
-
-      <PriceGuide magnetOptions={magnetOptions} />
       
       <ImageUploader onFileChange={handleFileChange} />
+
+      {currentEditingFile && (
+        <ImageEditor
+          file={currentEditingFile}
+          onSave={handleCroppedImage}
+          onCancel={() => setCurrentEditingFile(null)}
+        />
+      )}
 
       {orderItems.length > 0 && (
         <div className="space-y-6">
@@ -178,18 +110,15 @@ export default function CustomOrder() {
                 key={index}
                 item={item}
                 index={index}
-                magnetOptions={magnetOptions}
                 onQuantityChange={handleQuantityChange}
-                onSizeChange={handleSizeChange}
-                onRequirementsChange={handleRequirementsChange}
-                onRemove={removeItem}
+                onRemove={handleRemoveItem}
               />
             ))}
           </AnimatePresence>
           
           <OrderSummary
             totalPrice={totalPrice}
-            onSubmit={handleSubmitOrder}
+            onSubmit={() => router.push('/checkout')}
             isLoading={isLoading}
           />
         </div>

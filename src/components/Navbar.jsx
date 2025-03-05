@@ -4,7 +4,8 @@ import Link from "next/link"
 import { useAuth } from "@/contexts/AuthContext"
 import { useState } from "react"
 import { usePathname } from 'next/navigation'
-import { HiHome, HiViewGrid, HiCamera, HiUser, HiShoppingCart, HiTruck } from 'react-icons/hi'
+import { HiHome, HiViewGrid, HiCamera, HiUser, HiTruck, HiShoppingCart } from 'react-icons/hi'
+import Cart from './Cart'
 
 export default function Navbar() {
   const { user, signOut } = useAuth()
@@ -27,17 +28,12 @@ export default function Navbar() {
             <HiTruck className="h-5 w-5" />
             <span className="text-sm font-medium">Free Shipping on orders over £50</span>
           </div>
-          <Link href="/cart" className="relative">
-            <HiShoppingCart className="h-6 w-6 text-white" />
-            <span className="absolute -top-2 -right-2 bg-white text-indigo-600 text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-              0
-            </span>
-          </Link>
+          <Cart />
         </div>
       </div>
 
       {/* Desktop Navigation */}
-      <nav className="hidden sm:block bg-white shadow-md fixed w-full z-50">
+      <nav className="bg-white shadow-md fixed w-full z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -58,12 +54,7 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Link href="/cart" className="relative group">
-                <HiShoppingCart className="h-6 w-6 text-gray-700 group-hover:text-indigo-600" />
-                <span className="absolute -top-2 -right-2 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  0
-                </span>
-              </Link>
+              <Cart />
               
               {user ? (
                 <div className="relative">
@@ -128,7 +119,7 @@ export default function Navbar() {
       </nav>
 
       {/* Add bottom padding on mobile to account for bottom navigation */}
-      <div className="sm:hidden" />
+      <div className="sm:hidden h-16" />
     </>
   )
 } 

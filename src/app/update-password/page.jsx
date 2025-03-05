@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function UpdatePassword() {
   const router = useRouter()
+  const { updatePassword } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [formData, setFormData] = useState({
@@ -32,14 +33,12 @@ export default function UpdatePassword() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: formData.password,
-      })
+      const { error } = await updatePassword(formData.password)
 
       if (error) throw error
 
       // Password updated successfully
-      router.push('/login?message=Password updated successfully')
+      router.push('/login?message=' + encodeURIComponent('Password updated successfully! Please sign in with your new password.'))
     } catch (error) {
       setError(error.message)
     } finally {
