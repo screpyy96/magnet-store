@@ -49,9 +49,9 @@ export default function Custom() {
         throw new Error('Please upload only image files')
       }
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error('Image size should be less than 5MB')
+      // Validate file size (max 20MB)
+      if (file.size > 20 * 1024 * 1024) {
+        throw new Error('Image size should be less than 20MB')
       }
 
       setCurrentEditingFile(file)
@@ -66,12 +66,15 @@ export default function Custom() {
       setIsLoading(true)
       setError(null)
 
+      // Comprimă imaginea înainte de a o converti în base64
+      const compressedBlob = await compressImage(croppedBlob, 800) // Maxim 800px lățime/înălțime
+
       // Convert Blob to base64 for storage
       const reader = new FileReader()
       const base64Data = await new Promise((resolve, reject) => {
         reader.onloadend = () => resolve(reader.result)
         reader.onerror = () => reject(new Error('Failed to process image'))
-        reader.readAsDataURL(croppedBlob)
+        reader.readAsDataURL(compressedBlob)
       })
 
       const newOrderItem = {
@@ -89,6 +92,47 @@ export default function Custom() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Funcție pentru comprimarea imaginilor
+  const compressImage = async (blob, maxSize) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+        
+        // Calculează noile dimensiuni păstrând aspect ratio
+        if (width > height && width > maxSize) {
+          height = Math.round((height * maxSize) / width)
+          width = maxSize
+        } else if (height > maxSize) {
+          width = Math.round((width * maxSize) / height)
+          height = maxSize
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        // Convertește canvas în blob cu calitate redusă
+        canvas.toBlob(
+          (compressedBlob) => {
+            if (!compressedBlob) {
+              reject(new Error('Failed to compress image'))
+              return
+            }
+            resolve(compressedBlob)
+          },
+          'image/jpeg',
+          0.7 // Calitate 70%
+        )
+      }
+      img.onerror = () => reject(new Error('Failed to load image for compression'))
+      img.src = URL.createObjectURL(blob)
+    })
   }
 
   const handleQuantityChange = (index, value) => {

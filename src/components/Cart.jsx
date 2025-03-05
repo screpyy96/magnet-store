@@ -96,7 +96,7 @@ export default function Cart() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="fixed top-0 right-0 h-[calc(100vh-5rem)] w-full sm:absolute sm:w-[420px] sm:h-auto sm:top-full sm:mt-2 sm:right-0 bg-white shadow-2xl sm:rounded-xl border-l sm:border border-gray-200/50 overflow-hidden"
+              className="fixed top-0 right-0 h-[calc(100vh-10rem)] w-full sm:absolute sm:w-[420px] sm:h-auto sm:top-full sm:mt-2 sm:right-0 bg-white shadow-2xl sm:rounded-xl border-l sm:border border-gray-200/50 overflow-hidden"
             >
               <div className="flex flex-col h-full">
                 <div className="p-4 border-b border-gray-200 bg-white sticky top-0 z-10 flex justify-between items-center">
