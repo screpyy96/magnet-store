@@ -1,47 +1,36 @@
-import { createMiddlewareClient } from '@supabase/ssr'
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 
-export async function middleware(request) {
-  const response = NextResponse.next()
-  
-  const supabase = createMiddlewareClient(
-    { 
-      request, 
-      response 
-    },
-    {
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    }
-  )
-  
-  const { data: { session } } = await supabase.auth.getSession()
+export async function middleware(req) {
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req, res })
 
-  // Check auth condition
-  if (request.nextUrl.pathname.startsWith('/custom') ||
-      request.nextUrl.pathname.startsWith('/profile') ||
-      request.nextUrl.pathname.startsWith('/orders')) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  // Protected routes
+  if (req.nextUrl.pathname.startsWith('/custom') || 
+      req.nextUrl.pathname.startsWith('/profile') || 
+      req.nextUrl.pathname.startsWith('/orders')) {
     if (!session) {
-      return NextResponse.redirect(new URL('/login', request.url))
+      const redirectUrl = new URL('/login', req.url)
+      return NextResponse.redirect(redirectUrl)
     }
   }
 
+  // Auth routes
   if (session && (
-    request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/register')
+    req.nextUrl.pathname.startsWith('/login') || 
+    req.nextUrl.pathname.startsWith('/register')
   )) {
-    return NextResponse.redirect(new URL('/', request.url))
+    const redirectUrl = new URL('/', req.url)
+    return NextResponse.redirect(redirectUrl)
   }
 
-  return response
+  return res
 }
 
 export const config = {
-  matcher: [
-    
-    '/profile',
-    '/orders',
-    '/login',
-    '/register'
-  ]
+  matcher: ['/custom/:path*', '/profile/:path*', '/orders/:path*', '/login', '/register']
 } 
