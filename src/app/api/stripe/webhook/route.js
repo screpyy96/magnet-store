@@ -2,174 +2,79 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-// Initialize Supabase admin client for webhook
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+// Initialize Supabase client with environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export async function POST(request) {
+// Check if Supabase credentials are available
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase credentials. Make sure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.')
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+
+export async function POST(req) {
   try {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
-    
-    // Get the signature from the headers
-    const signature = request.headers.get('stripe-signature')
-    
-    if (!signature) {
+    const body = await req.text()
+    const signature = req.headers.get('stripe-signature')
+
+    if (!signature || !webhookSecret) {
       return NextResponse.json(
-        { error: 'Missing Stripe signature' },
+        { error: 'Missing stripe signature or webhook secret' },
         { status: 400 }
       )
     }
-    
-    // Get the raw body as text
-    const body = await request.text()
-    
-    // Verify and construct the event
+
+    // Verify the webhook signature
     let event
     try {
-      event = stripe.webhooks.constructEvent(
-        body,
-        signature,
-        process.env.STRIPE_WEBHOOK_SECRET
-      )
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
     } catch (err) {
       console.error(`Webhook signature verification failed: ${err.message}`)
       return NextResponse.json(
-        { error: `Webhook Error: ${err.message}` },
+        { error: `Webhook signature verification failed: ${err.message}` },
         { status: 400 }
       )
     }
-    
+
     // Handle the event
     switch (event.type) {
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object
+      case 'checkout.session.completed':
+        const session = event.data.object
         
-        // Get the order ID from the metadata
-        const orderId = paymentIntent.metadata.orderId
-        
-        if (!orderId) {
-          console.error('No order ID found in payment intent metadata')
-          return NextResponse.json(
-            { error: 'No order ID found in payment intent metadata' },
-            { status: 400 }
-          )
+        // Update order status in database
+        if (session.metadata?.orderId) {
+          const { error } = await supabase
+            .from('orders')
+            .update({ 
+              payment_status: 'paid',
+              stripe_session_id: session.id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', session.metadata.orderId)
+          
+          if (error) {
+            console.error('Error updating order:', error)
+            return NextResponse.json(
+              { error: 'Error updating order' },
+              { status: 500 }
+            )
+          }
         }
-        
-        // Update the payment transaction status
-        const { error: transactionError } = await supabaseAdmin
-          .from('payment_transactions')
-          .update({
-            status: 'completed',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('stripe_payment_intent_id', paymentIntent.id)
-        
-        if (transactionError) {
-          console.error('Error updating payment transaction:', transactionError)
-          return NextResponse.json(
-            { error: 'Error updating payment transaction' },
-            { status: 500 }
-          )
-        }
-        
-        // Update the order status
-        const { error: orderError } = await supabaseAdmin
-          .from('orders')
-          .update({
-            status: 'paid',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', orderId)
-        
-        if (orderError) {
-          console.error('Error updating order status:', orderError)
-          return NextResponse.json(
-            { error: 'Error updating order status' },
-            { status: 500 }
-          )
-        }
-        
         break
-      }
-      
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object
         
-        // Find the payment transaction with this payment intent
-        const { error: updateError } = await supabaseAdmin
-          .from('payment_transactions')
-          .update({
-            status: 'failed',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('stripe_payment_intent_id', paymentIntent.id)
-        
-        if (updateError) {
-          console.error('Error updating payment transaction:', updateError)
-          return NextResponse.json(
-            { error: 'Error updating payment transaction' },
-            { status: 500 }
-          )
-        }
-        
-        break
-      }
-      
-      case 'payment_intent.requires_action': {
-        const paymentIntent = event.data.object
-        
-        // Update the payment transaction status
-        const { error: updateError } = await supabaseAdmin
-          .from('payment_transactions')
-          .update({
-            status: 'requires_action',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('stripe_payment_intent_id', paymentIntent.id)
-        
-        if (updateError) {
-          console.error('Error updating payment transaction:', updateError)
-          return NextResponse.json(
-            { error: 'Error updating payment transaction' },
-            { status: 500 }
-          )
-        }
-        
-        break
-      }
-      
-      case 'payment_intent.canceled': {
-        const paymentIntent = event.data.object
-        
-        // Update the payment transaction status
-        const { error: updateError } = await supabaseAdmin
-          .from('payment_transactions')
-          .update({
-            status: 'canceled',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('stripe_payment_intent_id', paymentIntent.id)
-        
-        if (updateError) {
-          console.error('Error updating payment transaction:', updateError)
-          return NextResponse.json(
-            { error: 'Error updating payment transaction' },
-            { status: 500 }
-          )
-        }
-        
-        break
-      }
+      // Add other event types as needed
+      default:
+        console.log(`Unhandled event type: ${event.type}`)
     }
-    
-    // Return a response to acknowledge receipt of the event
+
     return NextResponse.json({ received: true })
-  } catch (error) {
-    console.error('Webhook error:', error)
+  } catch (err) {
+    console.error(`Webhook error: ${err.message}`)
     return NextResponse.json(
-      { error: error.message || 'Webhook processing failed' },
+      { error: `Webhook error: ${err.message}` },
       { status: 500 }
     )
   }
