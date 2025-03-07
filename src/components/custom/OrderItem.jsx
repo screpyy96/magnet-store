@@ -24,22 +24,22 @@ export default function OrderItem({ item, index, onQuantityChange, onRemove }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200"
+      className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 relative"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-        {/* Image */}
-        <div className="w-full sm:w-24 h-48 sm:h-24 relative rounded-lg overflow-hidden border border-gray-200">
+      <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+        {/* Image - Fixed square with proper aspect ratio */}
+        <div className="w-full sm:w-24 aspect-square rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
           <img
             src={imageUrl}
             alt="Magnet preview"
-            className="w-full h-full object-contain sm:object-cover"
+            className="w-full h-full object-cover"
           />
         </div>
 
         {/* Controls */}
-        <div className="flex-grow">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="w-full sm:w-32">
+        <div className="flex-grow w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="w-full sm:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-2 text-center sm:text-left">
                 Quantity
               </label>
@@ -77,7 +77,7 @@ export default function OrderItem({ item, index, onQuantityChange, onRemove }) {
               </div>
             </div>
 
-            <div className="text-center sm:text-left">
+            <div className="text-center sm:text-right">
               <p className="text-sm font-medium text-gray-700 mb-1">Price</p>
               <p className="text-lg font-semibold">£{(item.price * item.quantity).toFixed(2)}</p>
             </div>

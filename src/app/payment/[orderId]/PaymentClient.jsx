@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
+import { Elements } from '@stripe/react-stripe-js'
+import stripePromise from '@/lib/stripe'
+import PaymentForm from '@/components/custom/PaymentForm'
 
 export default function PaymentClient({ orderId }) {
   const router = useRouter()
@@ -10,6 +13,8 @@ export default function PaymentClient({ orderId }) {
   const [order, setOrder] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [clientSecret, setClientSecret] = useState(null)
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -37,6 +42,9 @@ export default function PaymentClient({ orderId }) {
         }
 
         setOrder(orderData)
+        
+        // Create or get payment intent
+        await createPaymentIntent(orderData.id)
       } catch (error) {
         console.error('Error fetching order:', error)
         setError(error.message)
@@ -47,6 +55,43 @@ export default function PaymentClient({ orderId }) {
 
     fetchOrder()
   }, [orderId, user, supabase, router])
+
+  const createPaymentIntent = async (orderId) => {
+    try {
+      // Call our API to create a payment intent
+      const response = await fetch('/api/stripe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId }),
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create payment intent')
+      }
+      
+      setClientSecret(data.clientSecret)
+    } catch (error) {
+      console.error('Payment intent error:', error)
+      setError(error.message)
+    }
+  }
+  
+  const handlePaymentSuccess = () => {
+    setPaymentSuccess(true)
+    // Redirect to confirmation page
+    setTimeout(() => {
+      router.push(`/orders/confirmation?order_id=${orderId}`)
+    }, 1500)
+  }
+  
+  const handlePaymentError = (error) => {
+    console.error('Payment error:', error)
+    setError(typeof error === 'string' ? error : error.message || 'Payment failed')
+  }
 
   if (!user) return null
   if (isLoading) return (
@@ -82,6 +127,21 @@ export default function PaymentClient({ orderId }) {
         >
           View Orders
         </button>
+      </div>
+    </div>
+  )
+  
+  if (paymentSuccess) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="max-w-md w-full bg-white p-6 rounded-lg shadow-sm text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+          <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
+        <p className="text-gray-600 mb-4">Redirecting to your order confirmation...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
       </div>
     </div>
   )
@@ -126,15 +186,40 @@ export default function PaymentClient({ orderId }) {
         </div>
       </div>
 
-      <button
-        onClick={() => {
-          // Handle payment here
-          console.log('Processing payment for order:', orderId)
-        }}
-        className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-      >
-        Pay £{order.total.toFixed(2)}
-      </button>
+      {clientSecret ? (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
+          <Elements
+            stripe={stripePromise}
+            options={{
+              clientSecret,
+              appearance: {
+                theme: 'stripe',
+                variables: {
+                  colorPrimary: '#4f46e5',
+                  colorBackground: '#ffffff',
+                  colorText: '#1f2937',
+                  colorDanger: '#ef4444',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  spacingUnit: '4px',
+                  borderRadius: '8px',
+                },
+              },
+            }}
+          >
+            <PaymentForm 
+              amount={order.total} 
+              orderId={orderId}
+              onSuccess={handlePaymentSuccess}
+              onError={handlePaymentError}
+            />
+          </Elements>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow p-6 mb-6 flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        </div>
+      )}
     </div>
   )
 } 

@@ -8,31 +8,37 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: {
-    default: 'MagnetCraft - Custom Fridge Magnets',
-    template: '%s | MagnetCraft'
+    default: 'My Sweet Magnets - Custom Fridge Magnets UK',
+    template: '%s | My Sweet Magnets'
   },
-  description: 'Create beautiful custom magnets for your fridge. Upload photos, create designs, and order high-quality magnets delivered to your door.',
-  keywords: ['custom magnets', 'fridge magnets', 'photo magnets', 'personalized magnets', 'custom gifts'],
+  description: 'Create beautiful custom magnets for your fridge. Upload photos, create designs, and order high-quality magnets delivered to your door in the UK.',
+  keywords: ['custom magnets', 'fridge magnets', 'photo magnets', 'personalized magnets', 'custom gifts', 'UK magnets'],
   openGraph: {
-    title: 'MagnetCraft - Custom Fridge Magnets',
-    description: 'Create beautiful custom magnets for your fridge. Upload photos, create designs, and order high-quality magnets.',
-    url: 'https://magnetcraft.com',
-    siteName: 'MagnetCraft',
+    title: 'My Sweet Magnets - Custom Fridge Magnets UK',
+    description: 'Create beautiful custom magnets for your fridge. Upload photos, create designs, and order high-quality magnets delivered across the UK.',
+    url: 'https://mysweetmagnets.co.uk',
+    siteName: 'My Sweet Magnets',
     images: [
       {
-        url: 'https://magnetcraft.com/og-image.jpg',
+        url: 'https://mysweetmagnets.co.uk/og-image.jpg',
         width: 1200,
         height: 630,
+        alt: 'My Sweet Magnets - Custom Fridge Magnets'
       }
     ],
-    locale: 'en_US',
+    locale: 'en_GB',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MagnetCraft - Custom Fridge Magnets',
-    description: 'Create beautiful custom magnets for your fridge. Upload photos, create designs, and order high-quality magnets.',
-    images: ['https://magnetcraft.com/twitter-image.jpg'],
+    title: 'My Sweet Magnets - Custom Fridge Magnets UK',
+    description: 'Create beautiful custom magnets for your fridge. Upload photos, create designs, and order high-quality magnets delivered across the UK.',
+    images: [{
+      url: 'https://mysweetmagnets.co.uk/twitter-image.jpg',
+      alt: 'My Sweet Magnets - Custom Fridge Magnets'
+    }],
+    site: '@mysweetmagnets',
+    creator: '@mysweetmagnets'
   },
   robots: {
     index: true,
@@ -45,9 +51,14 @@ export const metadata = {
       'max-snippet': -1,
     },
   },
+  canonical: 'https://mysweetmagnets.co.uk',
+  alternates: {
+    canonical: 'https://mysweetmagnets.co.uk',
+  },
   verification: {
     google: 'your-google-verification-code',
-  }
+  },
+  metadataBase: new URL('https://mysweetmagnets.co.uk'),
 }
 
 export default function RootLayout({ children }) {
@@ -57,7 +68,7 @@ export default function RootLayout({ children }) {
         <Providers>
           <div className="flex flex-col min-h-screen">
             <Navbar />
-            <main className="flex-grow pb-24 sm:pb-8 sm:pt-16">{children}</main> 
+            <main className="flex-grow pt-16 pb-20 sm:pb-8 bg-cream">{children}</main> 
             <Footer />
           </div>
         </Providers>
