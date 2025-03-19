@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 export default function OrderDetails({ params }) {
-  const resolvedParams = use(params)
+  const { orderId } = params
   const router = useRouter()
   const { user, supabase, isLoading: isAuthLoading } = useAuth()
   const [order, setOrder] = useState(null)
@@ -19,7 +19,7 @@ export default function OrderDetails({ params }) {
     if (isAuthLoading) return
 
     if (!user) {
-      router.push('/login?redirect=/orders/' + resolvedParams.orderId)
+      router.push('/login?redirect=/orders/' + orderId)
       return
     }
 
@@ -29,7 +29,7 @@ export default function OrderDetails({ params }) {
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
           .select('*')
-          .eq('id', resolvedParams.orderId)
+          .eq('id', orderId)
           .eq('user_id', user.id)
           .single()
 
@@ -56,7 +56,7 @@ export default function OrderDetails({ params }) {
         const { data: itemsData, error: itemsError } = await supabase
           .from('order_items')
           .select('*')
-          .eq('order_id', resolvedParams.orderId)
+          .eq('order_id', orderId)
 
         if (itemsError) throw itemsError
         setOrderItems(itemsData)
@@ -70,7 +70,7 @@ export default function OrderDetails({ params }) {
     }
 
     fetchOrderDetails()
-  }, [user, resolvedParams.orderId, supabase, router, isAuthLoading])
+  }, [user, orderId, supabase, router, isAuthLoading])
 
   // Show loading spinner while checking auth status
   if (isAuthLoading || !user) {
@@ -105,7 +105,7 @@ export default function OrderDetails({ params }) {
         {/* Order Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <h1 className="text-2xl font-semibold text-gray-900">Order Details</h1>
-          <p className="mt-1 text-sm text-gray-500">Order #{resolvedParams.orderId}</p>
+          <p className="mt-1 text-sm text-gray-500">Order #{orderId}</p>
         </div>
 
         <div className="px-6 py-4">

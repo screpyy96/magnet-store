@@ -4,3 +4,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Stiluri pentru a face mânerele de crop vizibile */
+.ReactCrop__crop-selection {
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.5) !important;
+}
+
+.ReactCrop__drag-handle {
+  background-color: #ffffff !important;
+  border: 1px solid #333333 !important;
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.ReactCrop__drag-handle::after {
+  background-color: #ffffff !important;
+}
+
+/* Mărește zona de atingere pentru mobile */
+.ReactCrop__drag-handle.ord-nw,
+.ReactCrop__drag-handle.ord-ne,
+.ReactCrop__drag-handle.ord-sw,
+.ReactCrop__drag-handle.ord-se {
+  width: 18px !important;
+  height: 18px !important;
+  margin-left: -9px !important;
+  margin-top: -9px !important;
+}
+
+/* Păstrează fondul clar pentru a vedea controls */
+.ReactCrop {
+  background: none !important;
+}
+
+.crop-container {
+  min-height: 200px;
+}
+

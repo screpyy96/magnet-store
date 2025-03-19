@@ -17,17 +17,20 @@
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.39.8",
     "framer-motion": "^12.4.10",
+    "lucide-react": "^0.483.0",
     "next": "^15.2.1",
     "next-seo": "^6.6.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
+    "react-easy-crop": "^5.0.2",
     "react-icons": "^5.5.0",
     "react-image-crop": "^11.0.7",
     "react-redux": "^9.2.0",
+    "recharts": "^2.15.1",
     "redux-persist": "^6.0.0",
     "stripe": "^17.7.0",
-    "react-easy-crop": "^5.0.2"
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

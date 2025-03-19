@@ -4,15 +4,22 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
 
-export default function AdminOrders() {
-  const { user, supabase } = useAuth()
+export default function OrdersManagement() {
+  const { user } = useAuth()
   const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState([])
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [sortBy, setSortBy] = useState('date_desc')
+  const [filter, setFilter] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    totalPages: 1,
+    totalCount: 0
+  })
 
   useEffect(() => {
     if (!user) {
@@ -38,56 +45,123 @@ export default function AdminOrders() {
         }
 
         setIsAdmin(true)
-        await fetchOrders()
+        await loadOrders()
       } catch (error) {
         console.error('Error checking admin status:', error)
         router.push('/')
       } finally {
-        setIsLoading(false)
+        setLoading(false)
       }
     }
 
     checkAdminStatus()
-  }, [user, router, supabase])
+  }, [user, router, filter, searchTerm, pagination.page])
 
-  const fetchOrders = async () => {
+  const loadOrders = async () => {
     try {
+      setLoading(true)
+      
       let query = supabase
         .from('orders')
-        .select(`
-          *,
-          profiles:user_id (email),
-          shipping_addresses (*)
-        `)
-
-      // Apply sorting
-      switch (sortBy) {
-        case 'date_asc':
-          query = query.order('created_at', { ascending: true })
-          break
-        case 'date_desc':
-          query = query.order('created_at', { ascending: false })
-          break
-        case 'total_asc':
-          query = query.order('total', { ascending: true })
-          break
-        case 'total_desc':
-          query = query.order('total', { ascending: false })
-          break
+        .select('*', { count: 'exact' })
+      
+      // Aplicarea filtrului de status
+      if (filter !== 'all') {
+        query = query.eq('status', filter)
       }
-
-      // Apply status filter
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter)
+      
+      // Aplicarea căutării doar pentru ID (vom face căutarea pentru email separat)
+      if (searchTerm) {
+        // Căutare după ID
+        query = query.ilike('id', `%${searchTerm}%`)
       }
-
-      const { data, error } = await query
-
+      
+      // Paginare
+      const from = (pagination.page - 1) * pagination.pageSize
+      const to = from + pagination.pageSize - 1
+      
+      // Obținerea comenzilor
+      const { data: ordersData, count, error } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to)
+      
       if (error) throw error
-
-      setOrders(data || [])
+      
+      // Dacă avem comenzi și avem nevoie de date despre utilizatori
+      let ordersWithUserInfo = []
+      if (ordersData && ordersData.length > 0) {
+        // Obținem ID-urile utilizatorilor din comenzi
+        const userIds = [...new Set(ordersData.map(order => order.user_id).filter(id => id))];
+        
+        // Preluăm datele profilurilor într-un query separat
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .in('id', userIds)
+        
+        if (profilesError) throw profilesError
+        
+        // Creăm un map pentru lookup rapid
+        const profilesMap = {}
+        if (profilesData) {
+          profilesData.forEach(profile => {
+            profilesMap[profile.id] = profile
+          })
+        }
+        
+        // Căutăm de asemenea în email-uri dacă avem termen de căutare
+        if (searchTerm && profilesData) {
+          const filteredProfileIds = profilesData
+            .filter(profile => profile.email && profile.email.toLowerCase().includes(searchTerm.toLowerCase()))
+            .map(profile => profile.id);
+          
+          // Filtrăm comenzile care au user_id în filteredProfileIds dacă avem un termen de căutare
+          if (filteredProfileIds.length > 0) {
+            ordersData = ordersData.filter(order => 
+              order.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+              filteredProfileIds.includes(order.user_id)
+            );
+          }
+        }
+        
+        // Combinăm datele
+        ordersWithUserInfo = ordersData.map(order => ({
+          ...order,
+          profiles: profilesMap[order.user_id] || { email: 'N/A' }
+        }))
+      }
+      
+      setOrders(ordersWithUserInfo)
+      setPagination({
+        ...pagination,
+        totalCount: count || 0,
+        totalPages: Math.ceil((count || 0) / pagination.pageSize)
+      })
     } catch (error) {
-      console.error('Error fetching orders:', error)
+      console.error('Error loading orders:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId)
+      
+      if (error) throw error
+      
+      // Actualizează lista local
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ))
+      
+      alert(`Status-ul comenzii #${orderId} a fost actualizat la ${newStatus}`)
+    } catch (error) {
+      console.error('Error updating order status:', error)
+      alert('A apărut o eroare la actualizarea statusului.')
     }
   }
 
@@ -113,21 +187,17 @@ export default function AdminOrders() {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
-  const handleStatusFilterChange = (e) => {
-    setStatusFilter(e.target.value)
-  }
-
-  const handleSortChange = (e) => {
-    setSortBy(e.target.value)
+  const handleFilterChange = (e) => {
+    setFilter(e.target.value)
   }
 
   useEffect(() => {
     if (isAdmin) {
-      fetchOrders()
+      loadOrders()
     }
-  }, [statusFilter, sortBy, isAdmin])
+  }, [filter, searchTerm, pagination.page, isAdmin])
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -170,8 +240,8 @@ export default function AdminOrders() {
             </label>
             <select
               id="status-filter"
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
+              value={filter}
+              onChange={handleFilterChange}
               className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
             >
               <option value="all">All Orders</option>
@@ -183,20 +253,15 @@ export default function AdminOrders() {
             </select>
           </div>
           <div>
-            <label htmlFor="sort-by" className="block text-sm font-medium text-gray-700 mb-1">
-              Sort by
+            <label htmlFor="search-term" className="block text-sm font-medium text-gray-700 mb-1">
+              Search by ID or Email
             </label>
-            <select
-              id="sort-by"
-              value={sortBy}
-              onChange={handleSortChange}
+            <input
+              id="search-term"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-            >
-              <option value="date_desc">Date (Newest first)</option>
-              <option value="date_asc">Date (Oldest first)</option>
-              <option value="total_desc">Total (High to Low)</option>
-              <option value="total_asc">Total (Low to High)</option>
-            </select>
+            />
           </div>
         </div>
       </div>
@@ -241,8 +306,7 @@ export default function AdminOrders() {
                       {order.id.substring(0, 8)}...
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {order.shipping_addresses?.full_name || 'N/A'}
-                      <div className="text-xs text-gray-400">{order.profiles?.email || 'No email'}</div>
+                      {order.profiles?.email || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(order.created_at)}
@@ -268,6 +332,70 @@ export default function AdminOrders() {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div className="flex-1 flex justify-between sm:hidden">
+          <button
+            onClick={() => setPagination({...pagination, page: Math.max(1, pagination.page - 1)})}
+            disabled={pagination.page === 1}
+            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+          >
+            Anterior
+          </button>
+          <button
+            onClick={() => setPagination({...pagination, page: Math.min(pagination.totalPages, pagination.page + 1)})}
+            disabled={pagination.page === pagination.totalPages}
+            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+          >
+            Următor
+          </button>
+        </div>
+        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Afișare <span className="font-medium">{orders.length > 0 ? (pagination.page - 1) * pagination.pageSize + 1 : 0}</span> - <span className="font-medium">{Math.min(pagination.page * pagination.pageSize, pagination.totalCount)}</span> din <span className="font-medium">{pagination.totalCount}</span> rezultate
+            </p>
+          </div>
+          <div>
+            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+              <button
+                onClick={() => setPagination({...pagination, page: Math.max(1, pagination.page - 1)})}
+                disabled={pagination.page === 1}
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <span className="sr-only">Anterior</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setPagination({...pagination, page})}
+                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium
+                    ${pagination.page === page
+                      ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setPagination({...pagination, page: Math.min(pagination.totalPages, pagination.page + 1)})}
+                disabled={pagination.page === pagination.totalPages}
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <span className="sr-only">Următor</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </nav>
+          </div>
         </div>
       </div>
     </div>

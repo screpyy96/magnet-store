@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useAuth } from "@/contexts/AuthContext"
 import { useState, useRef, useEffect } from "react"
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { HiHome, HiViewGrid, HiCamera, HiUser, HiTruck } from 'react-icons/hi'
 import Cart from './Cart'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -12,6 +12,7 @@ export default function Navbar() {
   const { user, signOut } = useAuth()
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
   const menuRef = useRef(null)
 
   // Close menu when clicking outside
@@ -30,21 +31,32 @@ export default function Navbar() {
     { name: 'Home', href: '/', icon: HiHome },
     { name: 'Products', href: '/products', icon: HiViewGrid },
     { name: 'Create', href: '/custom', icon: HiCamera },
-    { name: user ? 'Profile' : 'Sign In', href: user ? '/profile' : '/login', icon: HiUser }
+    { 
+      name: user ? 'Account' : 'Sign In', 
+      href: user ? '/account' : '/login?redirect=/custom', 
+      icon: HiUser 
+    }
   ]
 
   return (
     <>
-     
-
       {/* Desktop Navigation */}
       <nav className="bg-white shadow-md fixed w-full z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
+            {/* Logo and Left Side Navigation */}
             <div className="flex items-center">
+              {/* Logo - compact on mobile */}
               <Link href="/" className="flex items-center">
-                <span className="text-2xl font-bold text-indigo-600">My Sweet Magnets</span>
+                <span className="text-xl sm:text-2xl font-bold text-indigo-600 truncate">
+                  {/* Versiune optimizată pentru mobile */}
+                  <span className="hidden xs:inline">My </span>
+                  <span className="hidden xxs:inline">Sweet </span>
+                  <span>Magnets</span>
+                </span>
               </Link>
+              
+              {/* Desktop Navigation Links */}
               <div className="hidden sm:ml-8 sm:flex sm:space-x-8">
                 <Link href="/custom" className="text-gray-700 hover:text-indigo-600 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-indigo-600">
                   Create Custom
@@ -61,6 +73,7 @@ export default function Navbar() {
               </div>
             </div>
 
+            {/* Right Side Actions */}
             <div className="flex items-center space-x-4">
               <Cart />
               
@@ -68,7 +81,7 @@ export default function Navbar() {
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                    className="flex items-center space-x-3 text-gray-700 hover:text-indigo-600 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-lg transition-all duration-150"
+                    className="flex items-center space-x-2 sm:space-x-3 text-gray-700 hover:text-indigo-600 bg-gray-50 hover:bg-gray-100 px-2 sm:px-3 py-2 rounded-lg transition-all duration-150"
                   >
                     <span className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-medium shadow-inner">
                       {user.email?.[0].toUpperCase()}
@@ -97,14 +110,14 @@ export default function Navbar() {
                         </div>
                         <div className="py-1">
                           <Link 
-                            href="/profile" 
+                            href="/account" 
                             onClick={() => setIsProfileMenuOpen(false)}
                             className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 space-x-3"
                           >
                             <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
-                            <span>Profile</span>
+                            <span>Account</span>
                           </Link>
                           <Link 
                             href="/orders" 
@@ -132,10 +145,11 @@ export default function Navbar() {
                 </div>
               ) : (
                 <Link
-                  href="/login"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors"
+                  href="/login?redirect=/custom"
+                  className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors"
                 >
-                  Sign In
+                  <span className="sm:hidden">Sign</span>
+                  <span className="hidden sm:inline">Sign In</span>
                 </Link>
               )}
             </div>
@@ -143,7 +157,7 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation - păstrăm navigarea existentă */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
         <div className="grid grid-cols-4 h-16">
           {mobileNavItems.map((item) => {

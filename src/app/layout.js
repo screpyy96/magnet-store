@@ -3,6 +3,7 @@ import './globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import Providers from '@/components/Providers'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -55,9 +56,6 @@ export const metadata = {
   alternates: {
     canonical: 'https://mysweetmagnets.co.uk',
   },
-  verification: {
-    google: 'your-google-verification-code',
-  },
   metadataBase: new URL('https://mysweetmagnets.co.uk'),
 }
 
@@ -65,13 +63,15 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="flex-grow pt-16 pb-20 sm:pb-8 bg-cream">{children}</main> 
-            <Footer />
-          </div>
-        </Providers>
+        <AuthProvider>
+          <Providers>
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow pt-16 pb-20 sm:pb-8 bg-cream">{children}</main> 
+              <Footer />
+            </div>
+          </Providers>
+        </AuthProvider>
       </body>
     </html>
   )

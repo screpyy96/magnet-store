@@ -17,6 +17,7 @@ export default function Login() {
     email: '',
     password: '',
   })
+  const redirectUrl = searchParams.get('redirect') || '/';
 
   // Check for error or message in URL
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function Login() {
     })
   }
 
-  const handleEmailSignIn = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
@@ -56,18 +57,14 @@ export default function Login() {
       
       console.log('Sign in data:', signInData);
       
-      const { error } = await signIn(signInData);
+      const result = await signIn(signInData, redirectUrl);
 
-      if (error) {
-        console.error('Login error details:', error)
-        throw error
+      if (result.success) {
+        console.log('Login successful, redirecting...');
+      } else {
+        console.error('Login error details:', result.error)
+        throw new Error(result.error)
       }
-
-      console.log('Login successful, redirecting...');
-
-      // Redirect to home page or previous page
-      const redirectTo = searchParams.get('redirectTo') || '/'
-      router.push(redirectTo)
     } catch (error) {
       console.error('Login error:', error)
       setError(error.message || 'Failed to sign in. Please check your credentials and try again.')
@@ -142,7 +139,7 @@ export default function Login() {
           </div>
 
           {/* Email/Password Form */}
-          <form onSubmit={handleEmailSignIn} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address

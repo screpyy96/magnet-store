@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function AdminOrderDetails({ params }) {
+export default function AdminOrderPage({ params }) {
   const { orderId } = params
   const { user, supabase } = useAuth()
   const router = useRouter()
