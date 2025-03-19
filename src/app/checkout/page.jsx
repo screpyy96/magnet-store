@@ -174,6 +174,13 @@ export default function Checkout() {
     setError(null)
 
     try {
+      // În handlePlaceOrder, adaugă această verificare
+      if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+        showToast('Eroare de configurare la sistemul de plată. Te rugăm să contactezi suportul.', 'error');
+        setIsLoading(false);
+        return;
+      }
+
       // Pasul 1: Creează comanda în baza de date
       const response = await fetch('/api/checkout', {
         method: 'POST',

@@ -1,11 +1,24 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+// Inițializează Stripe doar dacă există cheia API
+let stripe;
+if (process.env.STRIPE_SECRET_KEY) {
+  const Stripe = require('stripe');
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+}
 
 export async function POST(request) {
   try {
+    // Verifică dacă Stripe este configurat
+    if (!stripe) {
+      console.error('Stripe API key is missing');
+      return NextResponse.json(
+        { error: 'Payment service is not configured' }, 
+        { status: 500 }
+      );
+    }
+
     const { orderId, amount } = await request.json()
     
     if (!orderId || !amount) {
