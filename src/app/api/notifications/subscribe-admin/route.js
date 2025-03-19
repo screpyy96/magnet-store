@@ -12,62 +12,57 @@ export async function POST(request) {
     }
     
     // Verifică dacă utilizatorul este admin
-    const { data: userData, error: userError } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('is_admin')
       .eq('id', userId)
       .single()
+      
+    console.log('Verificare admin pentru utilizatorul:', userId);
+    console.log('Profil:', profile);
+    console.log('Eroare profil:', profileError);
     
-    if (userError) throw userError
+    if (profileError) {
+      return new Response(JSON.stringify({ 
+        error: 'Error checking admin status', 
+        details: profileError.message 
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
     
-    if (!userData || !userData.is_admin) {
-      return new Response(JSON.stringify({ error: 'Unauthorized - Admin privileges required' }), {
+    if (!profile || !profile.is_admin) {
+      return new Response(JSON.stringify({ 
+        error: 'Unauthorized',
+        adminStatus: profile ? profile.is_admin : null
+      }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' }
       })
     }
     
-    // Verificăm dacă există deja un abonament pentru acest admin
-    const { data: existingSubscriptions, error: fetchError } = await supabase
+    // Salvează abonamentul de admin în tabela specifică
+    const { error } = await supabase
       .from('admin_push_subscriptions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('endpoint', subscription.endpoint)
+      .upsert({ 
+        admin_id: userId, 
+        subscription: subscription,
+        created_at: new Date().toISOString()
+      }, { 
+        onConflict: 'admin_id',
+        ignoreDuplicates: false
+      })
     
-    if (fetchError) throw fetchError
-    
-    if (existingSubscriptions && existingSubscriptions.length > 0) {
-      // Actualizăm abonamentul existent
-      const { error: updateError } = await supabase
-        .from('admin_push_subscriptions')
-        .update({
-          subscription: subscription,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingSubscriptions[0].id)
-      
-      if (updateError) throw updateError
-    } else {
-      // Creăm un nou abonament
-      const { error: insertError } = await supabase
-        .from('admin_push_subscriptions')
-        .insert({
-          user_id: userId,
-          endpoint: subscription.endpoint,
-          subscription: subscription,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-      
-      if (insertError) throw insertError
-    }
+    if (error) throw error
     
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
   } catch (error) {
-    console.error('Error saving admin subscription:', error)
+    console.error('Error saving admin push subscription:', error)
+    
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

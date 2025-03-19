@@ -11,50 +11,27 @@ export async function POST(request) {
       })
     }
     
-    // Verifică dacă există deja un abonament cu același endpoint
-    const { data: existingSubscription } = await supabase
+    // Salvează abonamentul în baza de date
+    const { error } = await supabase
       .from('push_subscriptions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('endpoint', subscription.endpoint)
-      .single()
-    
-    if (existingSubscription) {
-      // Dacă există, înseamnă că este deja abonat
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: 'Subscription already exists'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
+      .upsert({ 
+        user_id: userId, 
+        subscription: subscription,
+        created_at: new Date().toISOString()
+      }, { 
+        onConflict: 'user_id',
+        ignoreDuplicates: false
       })
-    }
     
-    // Salvează noul abonament
-    const { error: insertError } = await supabase
-      .from('push_subscriptions')
-      .insert([
-        {
-          user_id: userId,
-          subscription,
-          endpoint: subscription.endpoint,
-          created_at: new Date().toISOString()
-        }
-      ])
+    if (error) throw error
     
-    if (insertError) {
-      throw insertError
-    }
-    
-    return new Response(JSON.stringify({ 
-      success: true,
-      message: 'Subscription saved successfully'
-    }), {
-      status: 201,
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
   } catch (error) {
-    console.error('Error saving subscription:', error)
+    console.error('Error saving push subscription:', error)
+    
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

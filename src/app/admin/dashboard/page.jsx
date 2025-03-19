@@ -23,42 +23,78 @@ export default function AdminDashboard() {
   })
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login')
-      return
-    }
-
-    const checkAdminStatus = async () => {
-      try {
-        // Check if user is admin
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .single()
-
-        if (error) throw error
-
-        if (!data || !data.is_admin) {
-          // Not an admin, redirect to home
-          router.push('/')
-          return
+    const checkAdmin = async () => {
+      setTimeout(async () => {
+        setIsLoading(true)
+        
+        if (!user) {
+          const { data: { session } } = await supabase.auth.getSession()
+          
+          if (!session?.user) {
+            console.log("Nu s-a găsit nicio sesiune activă");
+            router.push('/login?redirect=/admin/dashboard')
+            return
+          }
+          
+          const userId = session.user.id
+          console.log("ID utilizator din sesiune:", userId)
+          
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', userId)
+            .single()
+          
+          if (error) {
+            console.error('Eroare la verificarea profilului:', error)
+            router.push('/')
+            return
+          }
+          
+          if (!profile || !profile.is_admin) {
+            console.log("Utilizatorul nu are rol de admin")
+            router.push('/')
+            return
+          }
+          
+          console.log("Autentificare admin reușită")
+          setIsAdmin(true)
+          loadStats()
+        } else {
+          try {
+            console.log("Verificare admin pentru utilizatorul:", user.id)
+            
+            const { data: profile, error } = await supabase
+              .from('profiles')
+              .select('is_admin')
+              .eq('id', user.id)
+              .single()
+            
+            if (error) throw error
+            
+            if (!profile || !profile.is_admin) {
+              console.log("Utilizatorul nu are rol de admin")
+              router.push('/')
+              return
+            }
+            
+            console.log("Autentificare admin reușită")
+            setIsAdmin(true)
+            loadStats()
+          } catch (error) {
+            console.error('Eroare la verificarea rolului admin:', error)
+            router.push('/')
+          }
         }
-
-        setIsAdmin(true)
-        await loadDashboardData()
-      } catch (error) {
-        console.error('Error checking admin status:', error)
-        router.push('/')
-      } finally {
+        
         setIsLoading(false)
-      }
+      }, 500)
     }
 
-    checkAdminStatus()
+    checkAdmin()
   }, [user, router, supabase])
 
-  const loadDashboardData = async () => {
+  const loadStats = async () => {
     try {
       setIsLoading(true)
       

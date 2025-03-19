@@ -9,6 +9,7 @@ import { clearCart } from '@/store/cartSlice'
 import { useToast } from '@/contexts/ToastContext'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import Link from 'next/link'
+import { loadStripe } from '@stripe/stripe-js'
 
 export default function Checkout() {
   const router = useRouter()
@@ -24,13 +25,15 @@ export default function Checkout() {
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [step, setStep] = useState(1) // 1: Shipping, 2: Payment, 3: Review
   const [shippingInfo, setShippingInfo] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    address: '',
+    full_name: '',
+    address_line1: '',
+    address_line2: '',
     city: '',
-    postalCode: '',
-    country: 'United Kingdom'
+    county: '',
+    postal_code: '',
+    country: 'United Kingdom',
+    phone: '',
+    is_default: false
   })
   const { showToast } = useToast()
 
@@ -48,31 +51,30 @@ export default function Checkout() {
 
   // Fetch user's saved addresses
   useEffect(() => {
-    const fetchAddresses = async () => {
-      if (!user) return
-
+    const loadAddresses = async () => {
       try {
         const { data, error } = await supabase
           .from('shipping_addresses')
           .select('*')
           .eq('user_id', user.id)
-          .order('is_default', { ascending: false })
-
+          .order('created_at', { ascending: false }) // Cele mai recente primele
+        
         if (error) throw error
-
+        
         setAddresses(data || [])
-        // Select default address if exists
-        const defaultAddress = data?.find(addr => addr.is_default)
-        if (defaultAddress) {
-          setSelectedAddressId(defaultAddress.id)
+        
+        // Selectează automat prima adresă (dacă există)
+        if (data && data.length > 0) {
+          setSelectedAddressId(data[0].id)
         }
       } catch (error) {
-        console.error('Error fetching addresses:', error)
-        setError('Failed to load saved addresses')
+        console.error('Error loading addresses:', error)
       }
     }
-
-    fetchAddresses()
+    
+    if (user) {
+      loadAddresses()
+    }
   }, [user, supabase])
 
   const handleAddressChange = (e) => {
@@ -84,38 +86,79 @@ export default function Checkout() {
 
   const handleAddressSubmit = async (e) => {
     e.preventDefault()
+    
+    // Validează datele de formular
+    if (!shippingInfo.full_name || !shippingInfo.address_line1 || !shippingInfo.city || !shippingInfo.postal_code) {
+      showToast('Te rugăm să completezi toate câmpurile obligatorii', 'error')
+      return
+    }
+    
     setIsLoading(true)
     setError(null)
 
     try {
+      // Adaugă timestamp-ul curent
+      const currentTime = new Date().toISOString()
+      
       const { data, error } = await supabase
         .from('shipping_addresses')
         .insert([
           {
-            ...shippingInfo,
-            user_id: user.id
+            user_id: user.id,
+            full_name: shippingInfo.full_name,
+            address_line1: shippingInfo.address_line1,
+            address_line2: shippingInfo.address_line2 || null,
+            city: shippingInfo.city,
+            county: shippingInfo.county || null,
+            postal_code: shippingInfo.postal_code,
+            country: shippingInfo.country,
+            phone: shippingInfo.phone || null,
+            is_default: shippingInfo.is_default,
+            created_at: currentTime,
+            updated_at: currentTime
           }
         ])
         .select()
-        .single()
 
       if (error) throw error
 
-      setAddresses([...addresses, data])
-      setSelectedAddressId(data.id)
-      setShowNewAddressForm(false)
+      // Dacă adresa este setată ca implicită, actualizează celelalte adrese
+      if (shippingInfo.is_default) {
+        await supabase
+          .from('shipping_addresses')
+          .update({ is_default: false })
+          .neq('id', data[0].id)
+          .eq('user_id', user.id)
+      }
+
+      // Actualizează lista de adrese și selectează noua adresă
+      const { data: updatedAddresses } = await supabase
+        .from('shipping_addresses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+      
+      setAddresses(updatedAddresses || [])
+      setSelectedAddressId(data[0].id)
+      
+      // Resetează formularul
       setShippingInfo({
-        firstName: '',
-        lastName: '',
-        email: '',
-        address: '',
+        full_name: '',
+        address_line1: '',
+        address_line2: '',
         city: '',
-        postalCode: '',
-        country: 'United Kingdom'
+        county: '',
+        postal_code: '',
+        country: 'United Kingdom',
+        phone: '',
+        is_default: false
       })
+      
+      showToast('Adresa a fost salvată cu succes', 'success')
     } catch (error) {
       console.error('Error saving address:', error)
-      setError('Failed to save address. Please try again.')
+      setError('Nu am putut salva adresa. Te rugăm să încerci din nou.')
+      showToast('Eroare la salvarea adresei', 'error')
     } finally {
       setIsLoading(false)
     }
@@ -123,7 +166,7 @@ export default function Checkout() {
 
   const handlePlaceOrder = async () => {
     if (!selectedAddressId) {
-      showToast('Please select a shipping address', 'error')
+      showToast('Te rugăm să selectezi o adresă de livrare', 'error')
       return
     }
 
@@ -131,7 +174,7 @@ export default function Checkout() {
     setError(null)
 
     try {
-      // Folosim noul API endpoint pentru checkout
+      // Pasul 1: Creează comanda în baza de date
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
@@ -148,25 +191,45 @@ export default function Checkout() {
       const data = await response.json()
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to process checkout')
+        throw new Error(data.error || 'Eroare la procesarea comenzii')
       }
 
-      // Succes - golim coșul și redirecționăm
-      dispatch(clearCart())
-      setOrderPlaced(true)
-      showToast('Order placed successfully!', 'success')
-      router.push(`/orders/${data.order.id}`)
+      // Pasul 2: Creează sesiunea de plată cu Stripe
+      const stripeResponse = await fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: data.order.id,
+          amount: data.order.total
+        }),
+      })
+
+      const stripeData = await stripeResponse.json()
+      
+      if (!stripeResponse.ok) {
+        throw new Error(stripeData.error || 'Eroare la inițierea plății')
+      }
+      
+      // Pasul 3: Redirecționează către pagina de confirmare CU orderId
+      // Vom gestiona plata în Success_URL din Stripe
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+      
+      // Redirecționează către Checkout Stripe
+      const result = await stripe.redirectToCheckout({
+        sessionId: stripeData.sessionId
+      })
+      
+      if (result.error) {
+        throw new Error(result.error.message)
+      }
+
     } catch (error) {
       console.error('Error:', error)
-      setError(error.message || 'Failed to create order. Please try again.')
+      setError(error.message || 'Eroare la procesarea comenzii. Te rugăm să încerci din nou.')
       setIsLoading(false)
     }
-  }
-
-  const handleSubmitOrder = () => {
-    // Aici ar veni logica de procesare a plății
-    // După procesare reușită, redirecționează către pagina de confirmare
-    router.push('/checkout/confirmation')
   }
 
   if (!user || cartItems.length === 0) {
@@ -200,83 +263,159 @@ export default function Checkout() {
           {step === 1 && (
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Shipping Information</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    value={shippingInfo.firstName}
-                    onChange={handleAddressChange}
-                    name="firstName"
-                  />
+              
+              {addresses.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="font-medium mb-2">Alege o adresă de livrare</h3>
+                  <div className="space-y-3">
+                    {addresses.map(address => (
+                      <div 
+                        key={address.id} 
+                        className={`border p-4 rounded-lg cursor-pointer ${
+                          selectedAddressId === address.id ? 'border-pink-500 bg-pink-50' : 'border-gray-200'
+                        }`}
+                        onClick={() => setSelectedAddressId(address.id)}
+                      >
+                        <div className="flex items-center">
+                          <input
+                            type="radio"
+                            name="address"
+                            checked={selectedAddressId === address.id}
+                            onChange={() => setSelectedAddressId(address.id)}
+                            className="mr-2"
+                          />
+                          <div>
+                            <p className="font-medium">{address.full_name}</p>
+                            <p className="text-sm text-gray-500">{address.address_line1}</p>
+                            {address.address_line2 && <p className="text-sm text-gray-500">{address.address_line2}</p>}
+                            <p className="text-sm text-gray-500">
+                              {address.city}, {address.postal_code}
+                            </p>
+                            <p className="text-sm text-gray-500">{address.country}</p>
+                            {address.is_default && (
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded mt-1 inline-block">
+                                Adresă implicită
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    value={shippingInfo.lastName}
-                    onChange={handleAddressChange}
-                    name="lastName"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input 
-                    type="email" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    value={shippingInfo.email}
-                    onChange={handleAddressChange}
-                    name="email"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    value={shippingInfo.address}
-                    onChange={handleAddressChange}
-                    name="address"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    value={shippingInfo.city}
-                    onChange={handleAddressChange}
-                    name="city"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    value={shippingInfo.postalCode}
-                    onChange={handleAddressChange}
-                    name="postalCode"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    value={shippingInfo.country}
-                    onChange={handleAddressChange}
-                    name="country"
-                  />
+              )}
+              
+              <div className="mt-4">
+                <h3 className="font-medium mb-2">
+                  {addresses.length > 0 ? 'Sau adaugă o adresă nouă' : 'Adaugă o adresă de livrare'}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nume complet*</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      value={shippingInfo.full_name}
+                      onChange={handleAddressChange}
+                      name="full_name"
+                      required
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Adresă linia 1*</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      value={shippingInfo.address_line1}
+                      onChange={handleAddressChange}
+                      name="address_line1"
+                      required
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Adresă linia 2</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      value={shippingInfo.address_line2}
+                      onChange={handleAddressChange}
+                      name="address_line2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Oraș*</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      value={shippingInfo.city}
+                      onChange={handleAddressChange}
+                      name="city"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Județ/Sector</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      value={shippingInfo.county}
+                      onChange={handleAddressChange}
+                      name="county"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cod poștal*</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      value={shippingInfo.postal_code}
+                      onChange={handleAddressChange}
+                      name="postal_code"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Țară*</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      value={shippingInfo.country}
+                      onChange={handleAddressChange}
+                      name="country"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                    <input 
+                      type="tel" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      value={shippingInfo.phone}
+                      onChange={handleAddressChange}
+                      name="phone"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex items-center">
+                    <input 
+                      type="checkbox" 
+                      id="is_default"
+                      className="mr-2"
+                      checked={shippingInfo.is_default}
+                      onChange={(e) => setShippingInfo({...shippingInfo, is_default: e.target.checked})}
+                    />
+                    <label htmlFor="is_default" className="text-sm text-gray-700">
+                      Setează ca adresă implicită
+                    </label>
+                  </div>
                 </div>
               </div>
+              
               <button 
-                onClick={() => setStep(2)}
-                className="mt-6 bg-gradient-to-r from-pink-400 to-amber-400 hover:from-pink-500 hover:to-amber-500 text-white px-4 py-2 rounded-full font-medium"
+                onClick={handleAddressSubmit}
+                className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+                disabled={isLoading}
               >
-                Continue to Payment
+                {isLoading ? 'Se salvează...' : 'Salvează adresa'}
               </button>
             </div>
           )}
@@ -328,7 +467,7 @@ export default function Checkout() {
                   Back
                 </button>
                 <button 
-                  onClick={handleSubmitOrder}
+                  onClick={handlePlaceOrder}
                   className="bg-gradient-to-r from-pink-400 to-amber-400 hover:from-pink-500 hover:to-amber-500 text-white px-4 py-2 rounded-full font-medium"
                 >
                   Place Order

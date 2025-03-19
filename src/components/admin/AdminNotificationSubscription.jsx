@@ -11,25 +11,26 @@ export default function AdminNotificationSubscription() {
   const [registration, setRegistration] = useState(null)
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
-      // Service worker și push notifications sunt suportate
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => {
-          setRegistration(reg)
-          return reg.pushManager.getSubscription()
-        })
-        .then(sub => {
-          if (sub) {
-            // Utilizatorul este deja abonat
-            setIsSubscribed(true)
-            setSubscription(sub)
-          }
-        })
-        .catch(error => {
-          console.error('Service Worker registration failed:', error)
-        })
-    }
-  }, [])
+    if (!('serviceWorker' in navigator)) return;
+    
+    const registerSW = async () => {
+      try {
+        const registration = await navigator.serviceWorker.register('/service-worker.js');
+        
+        setRegistration(registration);
+        
+        const existingSubscription = await registration.pushManager.getSubscription();
+        if (existingSubscription) {
+          setSubscription(existingSubscription);
+          setIsSubscribed(true);
+        }
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+      }
+    };
+    
+    registerSW();
+  }, []);
 
   // Verifică și actualizează abonamentul în backend când utilizatorul se conectează
   useEffect(() => {
@@ -37,6 +38,25 @@ export default function AdminNotificationSubscription() {
       updateSubscriptionOnServer(subscription)
     }
   }, [user, subscription])
+
+  // Adaugă la începutul componentei pentru debugging
+  useEffect(() => {
+    if (user) {
+      // Verifică direct dacă utilizatorul este admin
+      const checkAdmin = async () => {
+        const { data, error } = await fetch('/api/check-admin', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }).then(res => res.json());
+        
+        console.log('Status admin:', data, error);
+      };
+      
+      checkAdmin();
+    }
+  }, [user]);
 
   const subscribeToPushNotifications = async () => {
     if (!registration) return
