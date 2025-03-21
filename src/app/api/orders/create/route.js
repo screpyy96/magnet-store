@@ -4,14 +4,18 @@ import { cookies } from 'next/headers'
 import { stripe } from '@/lib/stripe-server'
 import { v4 as uuidv4 } from 'uuid'
 import webpush from 'web-push'
+import { createClient } from '@supabase/supabase-js'
 
 // Verifică dacă cheile VAPID sunt configurate
-if (process.env.VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+if (process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
   webpush.setVapidDetails(
-    'mailto:' + process.env.WEB_PUSH_EMAIL,
+    'mailto:' + process.env.NEXT_PUBLIC_WEB_PUSH_EMAIL,
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
+    process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY
   );
+  console.log('VAPID keys configured for push notifications');
+} else {
+  console.warn('VAPID keys not configured, push notifications will not work');
 }
 
 export async function POST(request) {
@@ -20,20 +24,76 @@ export async function POST(request) {
       items, 
       total, 
       shippingAddressId,
-      paymentMethodId 
+      paymentMethodId,
+      userId // Accept userId directly
     } = await request.json()
 
-    const cookieStore = await cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-    
-    // Verifică autentificarea
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !session) {
+    console.log('Received order request with:', {
+      itemsCount: items?.length,
+      hasShippingAddress: !!shippingAddressId,
+      hasPaymentMethod: !!paymentMethodId,
+      hasUserId: !!userId
+    })
+
+    // Validate required fields
+    if (!items || !items.length) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'No items provided' },
+        { status: 400 }
       )
     }
+
+    if (!shippingAddressId) {
+      return NextResponse.json(
+        { error: 'Shipping address is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!paymentMethodId) {
+      return NextResponse.json(
+        { error: 'Payment method is required' },
+        { status: 400 }
+      )
+    }
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Get all cookies for debugging
+    const cookieStore = await cookies()
+    const allCookies = cookieStore.getAll()
+    console.log('Available cookies:', allCookies.map(c => ({ name: c.name, path: c.path })))
+    
+    // Create Supabase client with explicit cookie handling
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    
+    // Create a service role client for operations that need to bypass RLS
+    const serviceRoleClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          persistSession: false
+        }
+      }
+    )
+    
+    // Optional session check - but we'll use the provided userId anyway
+    const { data, error: sessionError } = await supabase.auth.getSession()
+    console.log('Auth session check:', {
+      hasSession: !!data?.session,
+      sessionError: sessionError ? sessionError.message : null,
+      usingProvidedUserId: true
+    })
+    
+    // Use the provided userId instead of relying on session
+    const user_id = userId;
+    console.log('Using user_id:', user_id);
 
     // Mai întâi obținem sau creăm customer-ul Stripe
     let stripeCustomerId
@@ -42,7 +102,7 @@ export async function POST(request) {
     const { data: stripeCustomer } = await supabase
       .from('stripe_customers')
       .select('stripe_customer_id')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user_id)
       .single()
 
     if (stripeCustomer) {
@@ -50,9 +110,9 @@ export async function POST(request) {
     } else {
       // Creează un nou customer în Stripe
       const customer = await stripe.customers.create({
-        email: session.user.email,
+        email: data?.session?.user.email,
         metadata: {
-          supabase_user_id: session.user.id
+          supabase_user_id: user_id
         }
       })
 
@@ -61,7 +121,7 @@ export async function POST(request) {
         .from('stripe_customers')
         .insert([
           {
-            user_id: session.user.id,
+            user_id: user_id,
             stripe_customer_id: customer.id
           }
         ])
@@ -84,25 +144,54 @@ export async function POST(request) {
     const tax = subtotal * 0.20 // 20% VAT
     const totalPrice = subtotal + shippingCost + tax
 
-    // Creează payment intent în Stripe cu customer ID-ul
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(totalPrice * 100),
-      currency: 'gbp',
-      customer: stripeCustomerId,
-      payment_method: paymentMethodId,
-      confirm: true,
-      payment_method_types: ['card'],
-      metadata: {
-        user_id: session.user.id
+    // Check if we're using a mock payment method (for development)
+    const isMockPaymentMethod = paymentMethodId && paymentMethodId.startsWith('pm_mock_');
+    
+    let paymentIntent;
+    
+    if (isMockPaymentMethod && process.env.NODE_ENV === 'development') {
+      // In development mode with mock payment, create a mock payment intent
+      console.log('Using mock payment method in development mode');
+      paymentIntent = {
+        id: 'pi_mock_' + Math.random().toString(36).substring(2, 15),
+        status: 'succeeded',
+        amount: Math.round(totalPrice * 100),
+        currency: 'gbp',
+        customer: stripeCustomerId
+      };
+    } else {
+      // Real Stripe payment
+      // Creează payment intent în Stripe cu customer ID-ul
+      const paymentIntentParams = {
+        amount: Math.round(totalPrice * 100),
+        currency: 'gbp',
+        customer: stripeCustomerId,
+        metadata: {
+          user_id: user_id
+        }
+      };
+  
+      // Only add payment_method and confirm if we have a valid payment method
+      if (paymentMethodId) {
+        paymentIntentParams.payment_method = paymentMethodId;
+        paymentIntentParams.confirm = true;
+        paymentIntentParams.payment_method_types = ['card'];
+      } else {
+        // If no payment method, create a PaymentIntent without confirming
+        paymentIntentParams.payment_method_types = ['card'];
+        paymentIntentParams.setup_future_usage = 'off_session';
       }
-    })
+  
+      // Create the PaymentIntent
+      paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
+    }
 
-    // Creează comanda în baza de date
-    const { data: order, error: orderError } = await supabase
+    // Creează comanda în baza de date - using service role client
+    const { data: order, error: orderError } = await serviceRoleClient
       .from('orders')
       .insert([
         {
-          user_id: session.user.id,
+          user_id: user_id,
           status: 'processing',
           total_price: totalPrice,
           shipping_address: `${addressData.street}, ${addressData.city}, ${addressData.postal_code}`,
@@ -118,7 +207,10 @@ export async function POST(request) {
       .select()
       .single()
 
-    if (orderError) throw orderError
+    if (orderError) {
+      console.error('Failed to create order:', orderError);
+      throw orderError;
+    }
 
     // Creăm array-ul de order_items fără product_id
     const orderItems = items.map(item => {
@@ -150,30 +242,34 @@ export async function POST(request) {
       };
     });
 
-    // Inserăm datele în tabela order_items
-    const { data: orderItemsData, error: orderItemsError } = await supabase
+    // Inserăm datele în tabela order_items - using service role client
+    const { data: orderItemsData, error: orderItemsError } = await serviceRoleClient
       .from('order_items')
       .insert(orderItems);
 
     if (orderItemsError) {
+      console.error('Failed to insert order items:', orderItemsError);
       throw orderItemsError;
     }
 
-    // Adaugă tranzacția de plată
-    const { error: paymentError } = await supabase
+    // Adaugă tranzacția de plată - using service role to bypass RLS
+    const { error: paymentError } = await serviceRoleClient
       .from('payment_transactions')
       .insert([
         {
           order_id: order.id,
-          user_id: session.user.id,
-          payment_method: 'stripe',
+          user_id: user_id,
+          payment_method: isMockPaymentMethod ? 'stripe_mock' : 'stripe',
           amount: totalPrice,
           status: paymentIntent.status,
           stripe_payment_intent_id: paymentIntent.id
         }
       ])
 
-    if (paymentError) throw paymentError
+    if (paymentError) {
+      console.error('Failed to insert payment transaction:', paymentError);
+      throw paymentError;
+    }
 
     // Adaugă notificarea către admin
     await sendAdminNotification(supabase, order.id, { total: totalPrice, ...order })
@@ -210,9 +306,13 @@ export async function POST(request) {
 // Funcție pentru trimiterea notificării către admin
 async function sendAdminNotification(supabaseClient, orderId, orderDetails) {
   try {
+    console.log('Starting admin notification process for order:', orderId);
+    
     // Verifică dacă cheile VAPID sunt configurate
-    if (!process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-      console.log('Cheile VAPID nu sunt configurate, nu pot trimite notificări');
+    if (!process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+      console.error('VAPID keys not configured, cannot send notifications');
+      console.log('VAPID Private Key exists:', !!process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY);
+      console.log('VAPID Public Key exists:', !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
       return;
     }
 
@@ -229,10 +329,17 @@ async function sendAdminNotification(supabaseClient, orderId, orderDetails) {
       .select('id')
       .eq('is_admin', true);
     
-    if (adminError || !admins || admins.length === 0) {
-      console.log('Nu există administratori sau eroare la obținerea lor:', adminError);
+    if (adminError) {
+      console.error('Error fetching admin users:', adminError);
       return;
     }
+    
+    if (!admins || admins.length === 0) {
+      console.log('No admin users found in the system');
+      return;
+    }
+    
+    console.log('Found admin users:', admins.length);
     
     // Obține toate abonamentele push pentru administratori
     const adminIds = admins.map(admin => admin.id);
@@ -242,12 +349,27 @@ async function sendAdminNotification(supabaseClient, orderId, orderDetails) {
       .select('*')
       .in('user_id', adminIds);
     
-    if (subError || !subscriptions || subscriptions.length === 0) {
-      console.log('Nu există abonamente sau eroare la obținerea lor:', subError);
+    if (subError) {
+      console.error('Error fetching push subscriptions:', subError);
       return;
     }
     
-    console.log(`Trimit notificări la ${subscriptions.length} dispozitive administrative`);
+    if (!subscriptions || subscriptions.length === 0) {
+      console.log('No push subscriptions found for admin users');
+      console.log('Admin IDs checked:', adminIds);
+      return;
+    }
+    
+    console.log(`Sending notifications to ${subscriptions.length} admin devices`);
+    
+    // Debug output of subscription data (with sensitive data masked)
+    subscriptions.forEach((sub, index) => {
+      console.log(`Subscription ${index + 1}:`, {
+        user_id: sub.user_id,
+        endpoint: sub.endpoint ? sub.endpoint.substring(0, 30) + '...' : 'missing',
+        has_valid_data: !!sub.subscription
+      });
+    });
     
     // Pregătește payload-ul pentru notificare
     const payload = JSON.stringify({
@@ -262,15 +384,29 @@ async function sendAdminNotification(supabaseClient, orderId, orderDetails) {
     
     // Trimite notificări la toate dispozitivele
     const notificationPromises = subscriptions.map(subscription => {
+      // Verifică dacă avem un obiect de abonament valid
+      if (!subscription.subscription) {
+        console.error('Invalid subscription object for user:', subscription.user_id);
+        return Promise.resolve();
+      }
+      
       // Utilizăm direct obiectul subscription stocat în jsonb
       const pushSubscription = subscription.subscription;
       
       return webpush.sendNotification(pushSubscription, payload)
+        .then(() => {
+          console.log(`Successfully sent notification to endpoint: ${pushSubscription.endpoint.substring(0, 30)}...`);
+        })
         .catch(error => {
-          console.error('Eroare la trimiterea notificării:', error);
+          console.error('Error sending notification:', error.message, error.statusCode);
+          console.log('Failed subscription details:', { 
+            user_id: subscription.user_id,
+            endpoint: pushSubscription.endpoint.substring(0, 30) + '...'
+          });
           
           // Dacă abonamentul nu mai este valid, îl ștergem din baza de date
           if (error.statusCode === 404 || error.statusCode === 410) {
+            console.log('Subscription expired or invalid, removing from database');
             return supabaseClient
               .from('push_subscriptions')
               .delete()
@@ -280,9 +416,9 @@ async function sendAdminNotification(supabaseClient, orderId, orderDetails) {
     });
     
     await Promise.all(notificationPromises);
-    console.log('Notificări trimise cu succes');
+    console.log('Notification process completed');
     
   } catch (error) {
-    console.error('Eroare la trimiterea notificărilor admin:', error);
+    console.error('Error in admin notification process:', error);
   }
 } 

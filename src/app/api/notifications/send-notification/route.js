@@ -5,6 +5,8 @@ import webpush from 'web-push';
 
 export async function POST(request) {
   try {
+    console.log('Processing notification request');
+    
     // 1. Check if VAPID keys are configured
     if (!process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
       console.log('VAPID Private Key exists:', !!process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY);
@@ -26,7 +28,7 @@ export async function POST(request) {
     const { title, body, data } = requestData;
 
     // 4. Get Supabase client
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     // 5. Get all subscriptions from database

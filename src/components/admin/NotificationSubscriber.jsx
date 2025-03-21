@@ -40,7 +40,10 @@ const NotificationSubscriber = () => {
   }, []);
 
   const subscribeUser = async () => {
-    if (!swRegistration) return;
+    if (!swRegistration) {
+      toast.error('Service Worker not available');
+      return;
+    }
 
     try {
       setIsSubscribing(true);
@@ -55,15 +58,28 @@ const NotificationSubscriber = () => {
 
       const applicationServerKey = urlBase64ToUint8Array(publicKey);
       
+      // Log more detailed information
+      console.log('Subscribing to push with application server key:', publicKey.substring(0, 10) + '...');
+      
       const subscription = await swRegistration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey
       });
 
+      console.log('Subscription created successfully:', subscription);
+      
+      // Log a more detailed version of the subscription
+      const subscriptionJSON = subscription.toJSON();
+      console.log('Subscription JSON:', subscriptionJSON);
+      
       setDebugInfo(prev => ({ 
         ...prev, 
         subscriptionCreated: true,
-        endpoint: subscription.endpoint.substring(0, 30) + '...' 
+        endpoint: subscription.endpoint.substring(0, 30) + '...',
+        subscriptionDetails: {
+          endpoint: subscription.endpoint,
+          keys: subscriptionJSON.keys
+        }
       }));
 
       await updateSubscriptionOnServer(subscription);
@@ -102,24 +118,41 @@ const NotificationSubscriber = () => {
 
   const updateSubscriptionOnServer = async (subscription) => {
     try {
+      // Convert the PushSubscription to a plain object if needed
+      const subscriptionObject = subscription.toJSON ? subscription.toJSON() : subscription;
+      
+      console.log('Sending subscription to server:', subscriptionObject);
+      
       const response = await fetch('/api/notifications/subscribe-admin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          subscription: subscription
+          subscription: subscriptionObject
         })
       });
 
+      // Log the raw response for debugging
+      const responseText = await response.text();
+      console.log('Server response text:', responseText);
+      
+      // Parse the response if it's JSON
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Response is not valid JSON:', e);
+        setDebugInfo(prev => ({ ...prev, parseError: e.message, rawResponse: responseText }));
+        throw new Error('Invalid JSON response');
+      }
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error sending subscription:', errorText);
-        setDebugInfo(prev => ({ ...prev, serverError: errorText }));
+        console.error('Error sending subscription:', result);
+        setDebugInfo(prev => ({ ...prev, serverError: responseText }));
         throw new Error(`Server error: ${response.status}`);
       }
 
-      const result = await response.json();
       setDebugInfo(prev => ({ ...prev, serverResponse: result }));
       return result;
     } catch (error) {

@@ -8,9 +8,20 @@ export async function GET(request) {
   try {
     const requestUrl = new URL(request.url)
     const code = requestUrl.searchParams.get('code')
-    const redirectTo = requestUrl.searchParams.get('redirect') || '/'
+    
+    // Look for redirect in multiple possible locations
+    const redirectTo = 
+      requestUrl.searchParams.get('redirect_to') || 
+      requestUrl.searchParams.get('redirect') || 
+      '/'
+    
+    console.log('Auth callback received:', {
+      hasCode: !!code,
+      redirectTo
+    })
     
     if (!code) {
+      console.error('No code provided in callback')
       return NextResponse.redirect(new URL('/login', requestUrl.origin))
     }
 
@@ -21,13 +32,15 @@ export async function GET(request) {
     
     if (error) {
       console.error('Auth error:', error)
-      return NextResponse.redirect(new URL('/login', requestUrl.origin))
+      return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin))
     }
 
+    console.log('Successfully authenticated, redirecting to:', redirectTo)
+    
     // Redirect to the original requested page or home
     return NextResponse.redirect(new URL(redirectTo, requestUrl.origin))
   } catch (error) {
-    console.error('Auth error:', error)
+    console.error('Auth callback error:', error)
     return NextResponse.redirect(new URL('/login', requestUrl.origin))
   }
 } 

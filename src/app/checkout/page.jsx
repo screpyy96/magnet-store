@@ -11,13 +11,15 @@ import OrderSummary from '@/components/checkout/OrderSummary'
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { user, loading, setRedirectAfterLogin } = useAuth()
-  const cartItems = useSelector(state => state.cart.items)
+  const dispatch = useDispatch()
+  const cartItems = useSelector(selectCartItems)
   const [selectedAddress, setSelectedAddress] = useState(null)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
-
+  const { user, loading, refreshSession, setRedirectAfterLogin } = useAuth()
+  
+  // Calculate total from cart items
   const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
   useEffect(() => {
@@ -50,21 +52,35 @@ export default function CheckoutPage() {
       setError('Please select both shipping address and payment method')
       return
     }
+    
+    if (!selectedPaymentMethod.stripe_payment_method_id) {
+      setError('Invalid payment method. Please select a different card or add a new one.')
+      return
+    }
+    
+    if (!user || !user.id) {
+      setError('You must be logged in to place an order')
+      router.push('/login?redirect=/checkout')
+      return
+    }
 
     setIsLoading(true)
     setError(null)
 
     try {
+      // No need to refresh session, pass user ID directly
       const response = await fetch('/api/orders/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           items: cartItems,
           total: total,
           shippingAddressId: selectedAddress.id,
-          paymentMethodId: selectedPaymentMethod.stripe_payment_method_id
+          paymentMethodId: selectedPaymentMethod.stripe_payment_method_id,
+          userId: user.id // Pass user ID directly
         }),
       })
 

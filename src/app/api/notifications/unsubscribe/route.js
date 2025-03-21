@@ -4,8 +4,10 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request) {
   try {
-    // Obține cookie-urile corect, cu await
-    const cookieStore = cookies()
+    const { endpoint } = await request.json()
+
+    // Use await with cookies()
+    const cookieStore = await cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     
     // Verifică autentificarea

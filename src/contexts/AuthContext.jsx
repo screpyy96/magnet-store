@@ -11,6 +11,7 @@ export const AuthContext = createContext({
   signIn: async () => {},
   signOut: async () => {},
   signInWithGoogle: async () => {},
+  refreshSession: async () => {},
   supabase: null,
   setRedirectAfterLogin: () => {},
   getAndClearRedirectUrl: () => {},
@@ -30,7 +31,9 @@ export function AuthProvider({ children }) {
     const fetchUser = async () => {
       try {
         // Try to get session from storage first for faster restoration
-        const storedSession = localStorage.getItem('supabase_session');
+        const storedSession = typeof window !== 'undefined' ? 
+          localStorage.getItem('supabase_session') : null;
+          
         if (storedSession) {
           try {
             const parsedSession = JSON.parse(storedSession);
@@ -49,67 +52,61 @@ export function AuthProvider({ children }) {
           }
         }
         
-        // Always verify with Supabase to ensure session is still valid
-        const { data: { session }, error } = await supabase.auth.getSession()
+        // Always get the server session to ensure cookies are synchronized
+        const { data, error } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          // Save valid session to localStorage for faster restoration next time
-          localStorage.setItem('supabase_session', JSON.stringify({
-            ...session,
-            expires_at: new Date().getTime() + (session.expires_in || 3600) * 1000
-          }));
-          
-          setUser(session.user);
-          // Verifică dacă utilizatorul este admin
-          checkAdminStatus(session.user.id)
-        } else if (!error) {
-          // Clear session if no error but also no session
-          localStorage.removeItem('supabase_session');
+        if (error) {
+          console.error('Error fetching session:', error);
           setUser(null);
-          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+        
+        // Store the session for faster client-side access
+        if (data?.session) {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('supabase_session', JSON.stringify(data.session));
+          }
+          setUser(data.session.user || null);
+          if (data.session.user) {
+            checkAdminStatus(data.session.user.id);
+          }
+        } else {
+          setUser(null);
         }
       } catch (error) {
-        console.error('Error fetching session:', error)
-        setUser(null)
+        console.error('Session fetch error:', error);
+        setUser(null);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    
-    fetchUser()
+    };
 
-    // Ascultător pentru modificări în autentificare
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          // Save session to localStorage for faster restoration
-          if (session) {
-            localStorage.setItem('supabase_session', JSON.stringify({
-              ...session,
-              expires_at: new Date().getTime() + (session.expires_in || 3600) * 1000
-            }));
-          }
-        } else if (event === 'SIGNED_OUT') {
-          // Clear session on sign out
+    fetchUser();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('supabase_session', JSON.stringify(session));
+        }
+        setUser(session.user);
+        if (session.user) {
+          checkAdminStatus(session.user.id);
+        }
+      } else {
+        if (typeof window !== 'undefined') {
           localStorage.removeItem('supabase_session');
         }
-        
-        setUser(session?.user || null)
-        
-        if (session?.user) {
-          // Verifică dacă utilizatorul este admin când se schimbă starea de autentificare
-          checkAdminStatus(session.user.id)
-        } else {
-          setIsAdmin(false)
-        }
+        setUser(null);
+        setIsAdmin(false);
       }
-    )
+    });
 
     return () => {
-      // Curăță listener-ul la dezmontarea componentei
-      authListener?.subscription?.unsubscribe()
-    }
-  }, [])
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   // Funcție pentru verificarea statusului de admin
   const checkAdminStatus = async (userId) => {
@@ -165,10 +162,19 @@ export function AuthProvider({ children }) {
       setLoading(true)
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
-        password: credentials.password
+        password: credentials.password,
+        options: {
+          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined
+        }
       })
       
       if (error) throw error
+      
+      // Explicitly set the cookie for better cross-site handling
+      if (typeof window !== 'undefined' && data?.session) {
+        // Session will be automatically persisted in cookies by Supabase
+        console.log('Authentication successful, session established');
+      }
       
       // Obține parametrul redirect din URL sau folosește valoarea default
       const urlParams = new URLSearchParams(window.location.search)
@@ -205,36 +211,23 @@ export function AuthProvider({ children }) {
   
   const signInWithGoogle = async (redirectUrl = null) => {
     try {
-      // Determinați URL-ul de redirecționare bazat pe locația curentă
-      let baseRedirectUrl = '';
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
       
-      if (typeof window !== 'undefined') {
-        // Verificăm explicit dacă suntem pe localhost
-        const isLocalhost = window.location.hostname === 'localhost' || 
-                            window.location.hostname === '127.0.0.1';
-        
-        // Construim URL-ul de bază pentru redirecționare
-        baseRedirectUrl = isLocalhost 
-          ? `${window.location.protocol}//${window.location.host}/auth/callback`
-          : `${window.location.origin}/auth/callback`;
-        
-        console.log('Base redirect URL:', baseRedirectUrl);
+      // Build redirect path based on whether we have a custom redirect
+      let redirectPath = '/auth/callback';
+      if (redirectUrl) {
+        redirectPath += `?redirect=${encodeURIComponent(redirectUrl)}`;
       }
       
-      // Configurăm opțiunile pentru Supabase OAuth
-      const options = {
+      const fullRedirectUrl = `${origin}${redirectPath}`;
+      console.log('Google sign-in redirect:', fullRedirectUrl);
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectUrl 
-            ? `${baseRedirectUrl}?redirect=${encodeURIComponent(redirectUrl)}` 
-            : baseRedirectUrl
+          redirectTo: fullRedirectUrl
         }
-      };
-      
-      console.log('Using OAuth options:', options);
-      
-      // Efectuăm autentificarea
-      const { error } = await supabase.auth.signInWithOAuth(options);
+      });
       
       if (error) throw error;
       return { success: true };
@@ -261,20 +254,47 @@ export function AuthProvider({ children }) {
     }
   };
   
+  // Add the refreshSession function implementation
+  const refreshSession = async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error('Failed to refresh session:', error);
+        return { success: false, error };
+      }
+      
+      if (data.session) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('supabase_session', JSON.stringify(data.session));
+        }
+        setUser(data.session.user);
+        if (data.session.user) {
+          checkAdminStatus(data.session.user.id);
+        }
+        return { success: true, user: data.session.user };
+      }
+      
+      return { success: false, error: 'No session data returned' };
+    } catch (error) {
+      console.error('Session refresh error:', error);
+      return { success: false, error };
+    }
+  };
+  
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        supabase,
-        loading,
-        isAdmin,
-        signIn,
-        signOut,
-        signInWithGoogle,
-        setRedirectAfterLogin,
-        getAndClearRedirectUrl
-      }}
-    >
+    <AuthContext.Provider value={{
+      user,
+      isLoading: loading,
+      signIn,
+      signOut,
+      signInWithGoogle,
+      refreshSession,
+      supabase,
+      isAdmin,
+      setRedirectAfterLogin,
+      getAndClearRedirectUrl
+    }}>
       {children}
     </AuthContext.Provider>
   )

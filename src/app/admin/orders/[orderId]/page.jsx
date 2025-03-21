@@ -550,148 +550,127 @@ export default function AdminOrderPage({ params }) {
 
       {/* Order Items */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Order Items</h2>
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-white">
+          <h2 className="text-lg font-bold text-indigo-900 flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            Order Items
+            <span className="ml-2 text-sm font-medium bg-indigo-100 text-indigo-800 py-1 px-2 rounded-full">
+              {order.order_items?.length || 0} item{order.order_items?.length !== 1 ? 's' : ''}
+            </span>
+          </h2>
         </div>
         <div className="divide-y divide-gray-200">
           {order.order_items && order.order_items.length > 0 ? (
             order.order_items.map((item) => (
-              <div key={item.id} className="p-6 flex items-center">
-                <div className="w-32 h-32 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden mr-4 relative border-2 border-dashed border-indigo-300 flex flex-col">
-                  {/* Get image URL */}
+              <div key={item.id} className="p-6 flex flex-col md:flex-row gap-6">
+                {/* Image section - make it larger and more visible */}
+                <div className="w-full md:w-72 flex-shrink-0 flex flex-col gap-3">
                   {(() => {
                     const imageUrl = getImageUrl(item);
                     
                     return imageUrl ? (
                       <>
-                        <div className="relative group h-full w-full">
+                        {/* Larger image container to show image fully */}
+                        <div className="overflow-hidden rounded-lg shadow-md border border-gray-200 h-auto aspect-square">
                           <img
                             src={imageUrl}
                             alt={item.product_name}
-                            className="w-full h-full object-cover cursor-pointer"
+                            className="w-full h-full object-contain bg-white p-2"
+                            onError={(e) => {
+                              console.error("Error loading image:", e);
+                              e.target.src = "/placeholder-magnet.png";
+                            }}
+                          />
+                        </div>
+                        
+                        {/* Actions row for the image */}
+                        <div className="flex gap-2">
+                          {/* Preview button */}
+                          <button 
                             onClick={() => setPreviewImage({
                               url: imageUrl,
                               name: item.product_name,
                               id: item.id,
                               size: item.size
                             })}
-                            onError={(e) => {
-                              console.error("Error loading image:", e);
-                              e.target.src = "/placeholder-magnet.png";
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 flex items-center justify-center transition-all duration-200">
-                            <div className="flex flex-col gap-2 transform scale-90 group-hover:scale-100 transition-all duration-200">
-                              <button 
-                                className="p-2 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-indigo-50"
-                                onClick={() => setPreviewImage({
-                                  url: imageUrl,
-                                  name: item.product_name,
-                                  id: item.id,
-                                  size: item.size
-                                })}
-                              >
-                                <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
+                            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-sm font-medium flex items-center justify-center gap-1 transition-colors duration-200"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            Expand
+                          </button>
+                          
+                          {/* Download button */}
+                          <a 
+                            href={imageUrl} 
+                            download={`magnet-${item.id}.jpg`}
+                            className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium flex items-center justify-center gap-1 transition-colors duration-200"
+                            title="Download image"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download
+                          </a>
                         </div>
-                        
-                        {/* Download button for valid image */}
-                        <a 
-                          href={imageUrl} 
-                          download={`magnet-${item.id}.jpg`}
-                          className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white w-full flex justify-center items-center gap-1 text-xs font-medium transition-colors duration-200"
-                          title="Download image"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                          Download
-                        </a>
                       </>
                     ) : (
                       <>
-                        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-                          <svg className="w-10 h-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span className="text-sm text-gray-500 font-medium">No image available</span>
+                        <div className="bg-gray-100 rounded-lg overflow-hidden shadow-md border border-gray-200 h-auto aspect-square flex items-center justify-center">
+                          <div className="flex flex-col items-center justify-center p-4 text-center">
+                            <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-sm text-gray-500 font-medium">No image available</span>
+                          </div>
                         </div>
                         
                         {/* Disabled download button */}
-                        <div className="p-2 bg-gray-500 text-white w-full flex justify-center items-center gap-1 text-xs font-medium opacity-50 cursor-not-allowed">
+                        <button className="p-2 w-full bg-gray-500 text-white rounded-md flex justify-center items-center gap-1 text-sm font-medium opacity-50 cursor-not-allowed">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                           </svg>
-                          No Image
-                        </div>
+                          No Image Available
+                        </button>
                       </>
                     );
                   })()}
                 </div>
                 
                 <div className="flex-1">
-                  <h3 className="text-sm font-medium text-gray-900">{item.product_name}</h3>
-                  <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
-                  {item.size && <p className="text-sm text-gray-500">Size: {item.size}</p>}
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">{item.product_name}</h3>
                   
-                  {/* Debug info for image paths */}
-                  <div className="mt-2 p-2 bg-gray-50 rounded-md">
-                    <h4 className="text-xs font-semibold text-gray-700 mb-1">Image Debug Info:</h4>
-                    <p className="text-xs text-gray-500 truncate">
-                      <span className="font-medium">Item ID:</span> {item.id || 'Not available'}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      <span className="font-medium">Image URL:</span> {item.image_url || 'Not set'}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      <span className="font-medium">File Data:</span> {item.fileData || 'Not set'}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      <span className="font-medium">Image:</span> {item.image || 'Not set'}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      <span className="font-medium">Item Fields:</span> {Object.keys(item).join(', ')}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      <span className="font-medium">Custom Data:</span> {
-                        item.custom_data 
-                          ? (typeof item.custom_data === 'string' ? item.custom_data : JSON.stringify(item.custom_data)) 
-                          : 'Not set'
-                      }
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      <span className="font-medium">Metadata:</span> {
-                        item.metadata 
-                          ? (typeof item.metadata === 'string' ? item.metadata : JSON.stringify(item.metadata)) 
-                          : 'Not set'
-                      }
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      <span className="font-medium">Resolved URL:</span> {getImageUrl(item) || 'No image found'}
-                    </p>
-                    
-                    {/* Suggestion for database fix */}
-                    <div className="bg-yellow-50 p-2 mt-2 rounded border border-yellow-200">
-                      <p className="text-xs text-yellow-800">
-                        <strong>Missing Image:</strong> If orders don't have images, you may need to update your database. When saving an order, make sure to copy the <code>image</code> or <code>fileData</code> field from the cart item to the order_item.
+                  <div className="grid grid-cols-2 gap-4 mb-3">
+                    <div className="bg-gray-50 rounded-md p-3">
+                      <p className="text-sm text-gray-500 mb-1">
+                        <span className="font-medium">Quantity:</span> {item.quantity}
+                      </p>
+                      {item.size && <p className="text-sm text-gray-500">
+                        <span className="font-medium">Size:</span> {item.size}
+                      </p>}
+                    </div>
+                    <div className="bg-gray-50 rounded-md p-3">
+                      <p className="text-sm text-gray-500 mb-1">
+                        <span className="font-medium">Price per unit:</span> £{parseFloat(item.price_per_unit).toFixed(2)}
+                      </p>
+                      <p className="text-sm font-medium text-gray-700">
+                        <span className="font-medium">Total:</span> £{(item.price_per_unit * item.quantity).toFixed(2)}
                       </p>
                     </div>
                   </div>
                   
                   {item.special_requirements && (
-                    <p className="text-sm text-gray-500 mt-2">
-                      <span className="font-medium">Special requirements:</span><br />
-                      {item.special_requirements}
-                    </p>
+                    <div className="bg-indigo-50 p-3 rounded-md border border-indigo-100 mt-2">
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium text-indigo-700">Special requirements:</span><br />
+                        {item.special_requirements}
+                      </p>
+                    </div>
                   )}
-                </div>
-                <div className="text-sm font-medium text-gray-900 ml-4">
-                  £{(item.price_per_unit * item.quantity).toFixed(2)}
                 </div>
               </div>
             ))

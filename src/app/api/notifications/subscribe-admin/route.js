@@ -9,8 +9,39 @@ const FIXED_VAPID_PRIVATE_KEY = '6kWgmY26MUf3JvDOlzBVMffC70kJaCAOO4AmtfrwcWA';
 
 export async function POST(request) {
   try {
-    // Folosește await cu cookies()
-    const cookieStore = cookies();
+    // Try to extract subscription data with detailed error handling
+    let requestData;
+    try {
+      requestData = await request.json();
+      console.log('Received request data:', JSON.stringify(requestData));
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError);
+      return NextResponse.json({ 
+        error: 'Invalid JSON in request body',
+        details: parseError.message
+      }, { status: 400 });
+    }
+    
+    const { subscription } = requestData;
+    
+    if (!subscription) {
+      console.error('No subscription data provided, received:', requestData);
+      return NextResponse.json({ 
+        error: 'No subscription data provided',
+        received: requestData
+      }, { status: 400 });
+    }
+    
+    // Validate subscription object
+    if (!subscription.endpoint) {
+      console.error('Invalid subscription object, missing endpoint:', subscription);
+      return NextResponse.json({ 
+        error: 'Invalid subscription object (missing endpoint)',
+        received: subscription
+      }, { status: 400 });
+    }
+    
+    const cookieStore = await cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     
     // Verificăm configurarea VAPID
@@ -52,7 +83,11 @@ export async function POST(request) {
     
     // IMPORTANT: Verificăm dacă cheile sunt setate corect
     if (!vapidPublicKey || !vapidPrivateKey) {
-      console.error('Cheile VAPID nu sunt configurate corect');
+      console.error('Cheile VAPID nu sunt configurate corect:', { 
+        publicKeyExists: !!vapidPublicKey, 
+        privateKeyExists: !!vapidPrivateKey 
+      });
+      
       return NextResponse.json(
         { success: false, message: 'Configurare server incompletă pentru notificări push' },
         { status: 500 }
@@ -66,36 +101,24 @@ export async function POST(request) {
       vapidPrivateKey
     );
     
-    // Citim datele de abonament
-    let subscription;
-    try {
-      const body = await request.json();
-      // Verifică dacă subscription este direct în body sau în body.subscription
-      subscription = body.subscription || body;
-      
-      console.log('Abonament primit:', subscription.endpoint ? 
-        `${subscription.endpoint.substring(0, 30)}...` : 'Invalid');
-    } catch (parseError) {
-      console.error('Eroare la parsarea abonamentului:', parseError);
-      return NextResponse.json(
-        { success: false, message: 'Format invalid de abonament' },
-        { status: 400 }
-      );
-    }
+    // Ensure we have a valid subscription object for database storage
+    const subscriptionToStore = {
+      endpoint: subscription.endpoint,
+      keys: subscription.keys,
+      expirationTime: subscription.expirationTime
+    };
     
-    if (!subscription || !subscription.endpoint) {
-      return NextResponse.json(
-        { success: false, message: 'Date de abonament invalide' },
-        { status: 400 }
-      );
-    }
+    console.log('Processing subscription:', 
+      `Endpoint: ${subscriptionToStore.endpoint.substring(0, 30)}...`, 
+      `Keys present: ${!!subscriptionToStore.keys}`
+    );
     
     // Salvăm abonamentul în baza de date
     const { error: subscriptionError } = await supabase
-      .from('push_subscriptions')
+      .from('admin_push_subscription')
       .upsert({
-        endpoint: subscription.endpoint,
-        subscription: subscription,
+        endpoint: subscriptionToStore.endpoint,
+        subscription: subscriptionToStore,
         user_id: session.user.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -104,7 +127,7 @@ export async function POST(request) {
     if (subscriptionError) {
       console.error('Eroare la salvarea abonamentului:', subscriptionError);
       return NextResponse.json(
-        { success: false, message: 'Eroare la salvarea abonamentului' },
+        { success: false, message: 'Eroare la salvarea abonamentului', error: subscriptionError },
         { status: 500 }
       );
     }
@@ -112,8 +135,8 @@ export async function POST(request) {
     // Trimitem o notificare de test pentru a confirma funcționalitatea
     try {
       const payload = JSON.stringify({
-        title: 'Abonare reușită!',
-        body: 'Vei primi notificări pentru comenzile noi.',
+        title: 'Subscription Successful!',
+        body: 'You will now receive notifications for new orders.',
         data: {
           url: '/admin/orders',
           time: new Date().toISOString()
@@ -121,25 +144,25 @@ export async function POST(request) {
       });
       
       await webpush.sendNotification(subscription, payload);
-      console.log('Notificare de test trimisă cu succes!');
+      console.log('Test notification sent successfully!');
     } catch (notifError) {
-      console.error('Eroare la trimiterea notificării de test:', notifError);
+      console.error('Error sending test notification:', notifError);
       // Nu întrerupem procesul, doar logăm eroarea
       return NextResponse.json({ 
         success: true, 
-        message: 'Abonament înregistrat, dar notificarea de test a eșuat',
+        message: 'Subscription registered, but test notification failed',
         error: notifError.message
       });
     }
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Abonament înregistrat cu succes' 
+      message: 'Subscription registered successfully' 
     });
   } catch (error) {
-    console.error('Eroare server la API-ul de subscribere:', error);
+    console.error('Server error in subscription API:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'Eroare server internă' },
+      { success: false, message: error.message || 'Internal server error' },
       { status: 500 }
     );
   }
