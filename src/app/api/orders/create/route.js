@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { stripe } from '@/lib/stripe-server'
-import { v4 as uuidv4 } from 'uuid'
 import webpush from 'web-push'
 import { createClient } from '@supabase/supabase-js'
 
@@ -22,7 +21,6 @@ export async function POST(request) {
   try {
     const { 
       items, 
-      total, 
       shippingAddressId,
       paymentMethodId,
       userId // Accept userId directly
@@ -75,7 +73,7 @@ export async function POST(request) {
     // Create a service role client for operations that need to bypass RLS
     const serviceRoleClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      process.env.NEXT_PUBLIC_SERVICE_ROLE_KEY,
       {
         auth: {
           persistSession: false
