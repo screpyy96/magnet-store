@@ -5,12 +5,15 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
 import { useDispatch, useSelector } from 'react-redux'
-import { addItem, removeItem, updateQuantity, selectCartItems, clearCart } from '@/store/cartSlice'
+import { addItem, removeItem, updateQuantity, selectCartItems, clearCart } from '@/store/slices/cartSlice'
 import ImageUploader from '@/components/custom/ImageUploader'
 import OrderItem from '@/components/custom/OrderItem'
 import OrderSummary from '@/components/custom/OrderSummary'
 import ImageEditor from '@/components/custom/ImageEditor'
 import { useToast } from '@/contexts/ToastContext'
+import { uploadImage } from '@/utils/imageUpload'
+import { v4 as uuidv4 } from 'uuid'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 const MAGNET_PRICE = 9.99
 
@@ -23,12 +26,14 @@ export default function Custom() {
   const { showToast } = useToast()
   
   const dispatch = useDispatch()
-  const orderItems = useSelector(selectCartItems)
+  const orderItems = useSelector(selectCartItems) || []
   const totalPrice = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
-  // Improved auth check
+  // More efficient auth check to prevent unnecessary loading screens
   useEffect(() => {
-    if (!authLoading && !user) {
+    // Only redirect if we're certain user isn't authenticated and we're done loading
+    if (!authLoading && user === null) {
+      // We know for sure user is not authenticated
       router.push('/login?redirect=/custom')
     }
   }, [user, authLoading, router])
@@ -61,39 +66,91 @@ export default function Custom() {
     }
   }
 
-  const handleCroppedImage = async (croppedBlob) => {
+  const handleCroppedImage = async (blob) => {
     try {
-      setIsLoading(true)
-      setError(null)
-
-      if (!croppedBlob) {
-        throw new Error('Failed to process image')
+      console.log('Starting image upload, blob size:', blob.size);
+      setIsLoading(true);
+      
+      // Verifică dacă blob-ul este valid
+      if (!blob || blob.size === 0) {
+        throw new Error('Invalid image data');
       }
-
-      // Convert Blob to base64 for storage
-      const reader = new FileReader()
-      const base64Data = await new Promise((resolve, reject) => {
-        reader.onloadend = () => resolve(reader.result)
-        reader.onerror = () => reject(new Error('Failed to process image'))
-        reader.readAsDataURL(croppedBlob)
-      })
-
-      const newOrderItem = {
-        fileData: base64Data,
+      
+      // Limitează dimensiunea imaginii (optional)
+      if (blob.size > 5 * 1024 * 1024) { // 5MB
+        throw new Error('Image is too large (max 5MB)');
+      }
+      
+      // Generează un nume de fișier unic
+      const fileName = `custom_${Date.now()}_${Math.random().toString(36).substring(2, 15)}.png`;
+      const filePath = `custom_magnets/${fileName}`;
+      
+      // Obține un client Supabase
+      const supabase = createClientComponentClient();
+      
+      // Verifică autentificarea (doar dacă este necesară)
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('User authenticated:', !!session);
+      
+      // Upload cu logging detaliat
+      console.log('Uploading to path:', filePath);
+      const { data, error } = await supabase.storage
+        .from('magnet_images') // Asigură-te că acest bucket există
+        .upload(filePath, blob, {
+          contentType: 'image/png',
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (error) {
+        console.error('Supabase storage error:', error);
+        throw error;
+      }
+      
+      console.log('Upload successful:', data);
+      
+      // Construiește URL-ul public pentru imagine
+      const imageUrl = supabase.storage
+        .from('magnet_images') // Folosește bucket-ul corect, același ca la upload
+        .getPublicUrl(filePath).data.publicUrl;
+      
+      console.log('Image public URL:', imageUrl);
+      
+      // ADAUGĂ PRODUSUL LA COȘ - AICI ESTE SCHIMBAREA PRINCIPALĂ
+      const newItem = {
+        id: uuidv4(),
+        name: 'Custom Magnet',
+        price: MAGNET_PRICE,
         quantity: 1,
-        price: MAGNET_PRICE
-      }
-
-      dispatch(addItem(newOrderItem))
-      showToast('Magnet added to cart', 'success')
-      setCurrentEditingFile(null)
-    } catch (err) {
-      setError(err.message)
-      showToast(err.message, 'error')
+        // Use image_url as the primary field to match order_items table structure
+        image_url: imageUrl,
+        // Keep these for backward compatibility
+        image: imageUrl,
+        fileData: imageUrl,
+        // Store custom data properly
+        custom_data: JSON.stringify({
+          type: 'custom_magnet',
+          originalFileName: currentEditingFile.name
+        }),
+        size: 'standard'
+      };
+      
+      // Adaugă la coș
+      dispatch(addItem(newItem));
+      showToast('Magnet personalizat adăugat în coș!', 'success');
+      
+      // Continuă cu procesarea imaginii încărcate
+      setCurrentEditingFile(null);
+      
+      return imageUrl;
+    } catch (error) {
+      console.error('Detailed upload error:', error);
+      showToast('Eroare la încărcarea imaginii: ' + (error.message || 'Unknown error'), 'error');
+      throw new Error('Failed to upload image: ' + (error.message || 'Unknown error'));
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleQuantityChange = (index, value) => {
     try {
@@ -124,23 +181,33 @@ export default function Custom() {
     }
   }
 
+  // Simplified loading state logic - only show loading when really needed
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+    // Check for session with a safe client-side only check
+    const quickLoadCheck = typeof window !== 'undefined' && 
+      window.localStorage && 
+      window.localStorage.getItem('supabase_session') !== null;
+    
+    if (!quickLoadCheck) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
         </div>
-      </div>
-    )
+      )
+    }
+    // Otherwise render the page content immediately while auth state loads in background
   }
 
-  if (!user) {
+  // Only show this if we know for sure user is not logged in
+  if (user === null && !authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificare autentificare...</p>
+          <p className="text-gray-600">Checking authentication...</p>
         </div>
       </div>
     )
@@ -253,7 +320,7 @@ export default function Custom() {
         </div>
         
         {/* Order Items */}
-        {orderItems.length > 0 && (
+        {orderItems.length > 0 ? (
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
@@ -277,15 +344,28 @@ export default function Custom() {
                   />
                 ))}
               </AnimatePresence>
-              
-              <OrderSummary
-                totalPrice={totalPrice}
-                onSubmit={() => router.push('/checkout')}
-                isLoading={isLoading}
-              />
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+            <div className="p-6 text-center">
+              <p className="text-gray-500 mb-4">No products added yet. Upload an image to create a custom magnet.</p>
             </div>
           </div>
         )}
+
+        {/* Order Summary - Mereu vizibil */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+          <div className="p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
+            <OrderSummary
+              totalPrice={totalPrice}
+              onSubmit={() => router.push('/checkout')}
+              isLoading={isLoading}
+              disabled={orderItems.length === 0}
+            />
+          </div>
+        </div>
       </div>
 
       {currentEditingFile && (

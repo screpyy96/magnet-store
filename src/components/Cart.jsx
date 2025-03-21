@@ -3,13 +3,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
-import { selectCartItems, selectCartTotalAmount, removeItem, updateQuantity } from '@/store/cartSlice'
+import { selectCartItems, selectCartTotalAmount, removeItem, updateQuantity } from '@/store/slices/cartSlice'
 import Link from 'next/link'
 import { useToast } from '@/contexts/ToastContext'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 export default function Cart() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isClient, setIsClient] = useState(false)
   const items = useSelector(selectCartItems)
   const totalAmount = useSelector(selectCartTotalAmount)
   const dispatch = useDispatch()
@@ -17,7 +19,10 @@ export default function Cart() {
   const { showToast } = useToast()
   const router = useRouter()
 
-  // Close cart when clicking outside
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (cartRef.current && !cartRef.current.contains(event.target)) {
@@ -59,7 +64,6 @@ export default function Cart() {
 
   return (
     <>
-      {/* Overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -73,7 +77,6 @@ export default function Cart() {
       </AnimatePresence>
 
       <div className="relative z-50" ref={cartRef}>
-        {/* Cart Icon */}
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="relative group p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -81,14 +84,13 @@ export default function Cart() {
           <svg className="h-6 w-6 text-gray-700 group-hover:text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
-          {items.length > 0 && (
+          {isClient && items.length > 0 && (
             <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
               {items.length}
             </span>
           )}
         </button>
 
-        {/* Cart Dropdown */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
@@ -127,11 +129,23 @@ export default function Cart() {
                       {items.map((item, index) => (
                         <div key={index} className="flex items-center space-x-4 bg-gray-50/80 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                           <div className="w-16 h-16 relative rounded-md overflow-hidden border border-gray-200 bg-white shrink-0">
-                            <img
-                              src={item.fileData}
-                              alt="Product"
-                              className="w-full h-full object-cover"
-                            />
+                            {(item.image || item.fileData) ? (
+                              <Image
+                                src={item.image || item.fileData}
+                                alt={item.name || "Product"}
+                                fill
+                                sizes="64px"
+                                className="object-cover"
+                                onError={(e) => {
+                                  console.error("Error loading image:", e);
+                                  e.target.src = "/placeholder-magnet.png";
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500 text-xs text-center p-2">
+                                Product preview
+                              </div>
+                            )}
                           </div>
                           <div className="flex-grow min-w-0">
                             <div className="flex items-center space-x-4">

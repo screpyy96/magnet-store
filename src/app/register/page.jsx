@@ -1,12 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { FcGoogle } from 'react-icons/fc'
+import React from 'react'
 
-export default function Register() {
+// Loading component for Suspense
+function RegisterLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+    </div>
+  );
+}
+
+// Main content component
+function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { signUp, signInWithGoogle } = useAuth()
@@ -209,4 +220,13 @@ export default function Register() {
       </div>
     </div>
   )
+}
+
+// Export the wrapped component with Suspense
+export default function Register() {
+  return (
+    <Suspense fallback={<RegisterLoading />}>
+      <RegisterForm />
+    </Suspense>
+  );
 } 

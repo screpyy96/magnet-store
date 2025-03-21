@@ -9,8 +9,8 @@ const createNoopStorage = () => {
     getItem() {
       return Promise.resolve(null)
     },
-    setItem(_key, value) {
-      return Promise.resolve(value)
+    setItem() {
+      return Promise.resolve()
     },
     removeItem() {
       return Promise.resolve()
@@ -20,16 +20,18 @@ const createNoopStorage = () => {
 
 // Folosim un storage alternativ în caz de eroare
 const getStorage = () => {
-  try {
-    // Testăm dacă localStorage este disponibil și are spațiu
-    const testKey = 'redux-persist-storage-test'
-    window.localStorage.setItem(testKey, 'test')
-    window.localStorage.removeItem(testKey)
-    return storage
-  } catch (e) {
-    console.warn('localStorage is not available or quota exceeded, falling back to noop storage')
-    return createNoopStorage()
+  if (typeof window !== 'undefined') {
+    try {
+      const testKey = '__storage_test__'
+      window.localStorage.setItem(testKey, testKey)
+      window.localStorage.removeItem(testKey)
+      return require('redux-persist/lib/storage').default
+    } catch (e) {
+      console.warn('localStorage not available, falling back to noop storage')
+      return createNoopStorage()
+    }
   }
+  return createNoopStorage()
 }
 
 const persistConfig = {

@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { FcGoogle } from 'react-icons/fc'
 
-export default function Login() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signIn, signInWithGoogle } = useAuth()
+  const { signIn, signInWithGoogle, user, loading, getAndClearRedirectUrl } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [successMessage, setSuccessMessage] = useState('')
@@ -32,6 +32,15 @@ export default function Login() {
       setSuccessMessage(decodeURIComponent(message))
     }
   }, [searchParams])
+
+  useEffect(() => {
+    if (!loading && user) {
+      // First check for URL parameter, then stored redirect, then default to homepage
+      const storedRedirectUrl = getAndClearRedirectUrl()
+      const finalRedirectUrl = redirectUrl || storedRedirectUrl || '/'
+      router.push(finalRedirectUrl)
+    }
+  }, [user, loading, router, redirectUrl, getAndClearRedirectUrl])
 
   const handleChange = (e) => {
     setFormData({
@@ -80,11 +89,13 @@ export default function Login() {
       
       console.log('Attempting to sign in with Google');
       
-      // The signInWithGoogle function will redirect to Google
-      // No need to handle the response here as the redirect will happen automatically
-      await signInWithGoogle();
+      const result = await signInWithGoogle(redirectUrl);
       
-      // This code will not execute due to the redirect
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+      
+      // Acest cod nu se va executa din cauza redirecționării
     } catch (error) {
       console.error('Google sign in failed:', error)
       setError(error.message || 'Failed to sign in with Google. Please try again.')
@@ -204,4 +215,22 @@ export default function Login() {
       </div>
     </div>
   )
+}
+
+// Loading fallback UI for the Suspense boundary
+function LoginLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+    </div>
+  );
+}
+
+// Wrap the LoginForm component with Suspense
+export default function Login() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginForm />
+    </Suspense>
+  );
 } 

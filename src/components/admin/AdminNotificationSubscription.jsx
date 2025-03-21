@@ -1,112 +1,200 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function AdminNotificationSubscription() {
   const { user } = useAuth()
-  const [isSubscribed, setIsSubscribed] = useState(false)
-  const [isSubscribing, setIsSubscribing] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [subscription, setSubscription] = useState(null)
-  const [registration, setRegistration] = useState(null)
+  const [isSubscribed, setIsSubscribed] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [vapidPublicKey, setVapidPublicKey] = useState(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || null)
 
-  useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
-    
-    const registerSW = async () => {
-      try {
-        const registration = await navigator.serviceWorker.register('/service-worker.js');
-        
-        setRegistration(registration);
-        
-        const existingSubscription = await registration.pushManager.getSubscription();
-        if (existingSubscription) {
-          setSubscription(existingSubscription);
-          setIsSubscribed(true);
-        }
-      } catch (error) {
-        console.error('Service Worker registration failed:', error);
-      }
-    };
-    
-    registerSW();
-  }, []);
+  // Verifică dacă notificările push sunt suportate
+  const isPushSupported = () => {
+    return 'serviceWorker' in navigator && 'PushManager' in window && vapidPublicKey
+  }
 
-  // Verifică și actualizează abonamentul în backend când utilizatorul se conectează
+  // Verifică sau configurează sistemul de notificări
   useEffect(() => {
-    if (user && subscription) {
-      updateSubscriptionOnServer(subscription)
-    }
-  }, [user, subscription])
-
-  // Adaugă la începutul componentei pentru debugging
-  useEffect(() => {
-    if (user) {
-      // Verifică direct dacă utilizatorul este admin
-      const checkAdmin = async () => {
-        const { data, error } = await fetch('/api/check-admin', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
+    if (!vapidPublicKey) {
+      console.log('Obțin cheile de configurare pentru notificări...');
+      fetch('/api/setup-notifications')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.vapidPublicKey) {
+            setVapidPublicKey(data.vapidPublicKey);
+            console.log('Chei obținute cu succes');
+          } else {
+            console.error('Eroare la configurarea notificărilor:', data.message);
+            setError('Sistemul de notificări nu este configurat corect.');
           }
-        }).then(res => res.json());
-        
-        console.log('Status admin:', data, error);
-      };
-      
-      checkAdmin();
+        })
+        .catch(err => {
+          console.error('Eroare la configurarea notificărilor:', err);
+          setError('Nu s-a putut configura sistemul de notificări.');
+        });
     }
-  }, [user]);
+  }, [vapidPublicKey]);
 
-  const subscribeToPushNotifications = async () => {
-    if (!registration) return
+  // Verifică dacă utilizatorul este admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) {
+        setLoading(false)
+        return
+      }
 
+      try {
+        // Obține statusul de admin din localStorage
+        const adminStatus = localStorage.getItem(`admin_status_${user.id}`)
+        
+        if (adminStatus === 'true') {
+          console.log('Admin status din localStorage: true');
+          setIsAdmin(true)
+          if (isPushSupported()) {
+            await registerServiceWorker()
+          }
+        } else {
+          // Verifică și la server pentru a fi sigur
+          const response = await fetch('/api/check-admin')
+          
+          if (!response.ok) {
+            throw new Error(`Eroare server: ${response.status}`)
+          }
+          
+          const data = await response.json()
+          console.log('Admin status from DB:', data.isAdmin);
+          setIsAdmin(data.isAdmin)
+          localStorage.setItem(`admin_status_${user.id}`, data.isAdmin.toString())
+          
+          if (data.isAdmin && isPushSupported()) {
+            await registerServiceWorker()
+          }
+        }
+      } catch (err) {
+        console.error('Eroare la verificarea statusului de admin:', err)
+        setError('Nu s-a putut verifica statusul de administrator.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    checkAdmin()
+  }, [user])
+
+  // Înregistrează service worker-ul
+  const registerServiceWorker = async () => {
     try {
-      setIsSubscribing(true)
+      if (!isPushSupported()) {
+        console.log('Notificările push nu sunt suportate în acest browser sau nu sunt configurate.')
+        return
+      }
+
+      console.log('Înregistrez service worker-ul...')
       
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey)
+      // Înregistrează service worker-ul
+      const registration = await navigator.serviceWorker.register('/service-worker.js')
+      console.log('Service Worker înregistrat cu succes:', registration)
       
-      const newSubscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: convertedVapidKey
-      })
+      // Așteaptă ca service worker-ul să fie ready
+      await navigator.serviceWorker.ready
+      console.log('Service Worker este ready')
       
-      setSubscription(newSubscription)
-      setIsSubscribed(true)
+      // Verifică dacă există un abonament existent
+      const existingSubscription = await registration.pushManager.getSubscription()
       
-      // Trimite abonamentul la server ca admin
-      await updateSubscriptionOnServer(newSubscription)
-      
-    } catch (error) {
-      console.error('Failed to subscribe to admin push notifications:', error)
-    } finally {
-      setIsSubscribing(false)
+      if (existingSubscription) {
+        console.log('Am găsit un abonament existent:', existingSubscription)
+        setSubscription(existingSubscription)
+        setIsSubscribed(true)
+        // Actualizează abonamentul pe server pentru a fi sigur
+        await updateSubscriptionOnServer(existingSubscription)
+      } else {
+        console.log('Nu există un abonament anterior, creez unul nou')
+        // Solicită permisiunile și creează un abonament nou
+        await subscribeUserToPush(registration)
+      }
+    } catch (err) {
+      console.error('Eroare la înregistrarea Service Worker:', err)
+      setError('Nu s-a putut înregistra service worker-ul.')
     }
   }
 
-  const updateSubscriptionOnServer = async (subscription) => {
-    if (!user) return
-    
+  // Creează un abonament nou pentru notificările push
+  const subscribeUserToPush = async (registration) => {
     try {
-      await fetch('/api/notifications/subscribe-admin', {
+      console.log('Solicit permisiuni pentru notificări...')
+      const permission = await Notification.requestPermission()
+      
+      if (permission !== 'granted') {
+        throw new Error('Permisiunea de notificări a fost refuzată')
+      }
+      
+      if (!vapidPublicKey) {
+        throw new Error('Lipsește cheia VAPID publică')
+      }
+      
+      console.log('Convertesc cheia publică:', vapidPublicKey.substring(0, 10) + '...')
+      // Convertește cheia publică în array de bytes
+      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey)
+      
+      console.log('Creez abonament push...')
+      // Creează abonamentul
+      const newSubscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey
+      })
+      
+      console.log('Abonament creat:', newSubscription)
+      setSubscription(newSubscription)
+      setIsSubscribed(true)
+      
+      // Trimite abonamentul la server
+      await updateSubscriptionOnServer(newSubscription)
+    } catch (err) {
+      console.error('Eroare la abonare:', err)
+      setError('Nu s-a putut crea abonamentul pentru notificări.')
+    }
+  }
+
+  // Trimite abonamentul la server
+  const updateSubscriptionOnServer = async (subscription) => {
+    try {
+      console.log('Trimit abonamentul la server...')
+      const response = await fetch('/api/notifications/subscribe-admin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId: user.id,
-          subscription: subscription
-        }),
+        body: JSON.stringify(subscription)
       })
-    } catch (error) {
-      console.error('Error saving admin subscription to server:', error)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Eroare la trimiterea abonamentului:', errorText)
+        throw new Error(`Eroare server: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        console.log('Abonament trimis cu succes la server')
+      } else {
+        console.error('Eroare la trimiterea abonamentului:', data)
+        throw new Error(data.message || 'Eroare necunoscută')
+      }
+    } catch (err) {
+      console.error('Eroare la actualizarea abonamentului pe server:', err)
+      setError('Nu s-a putut salva abonamentul.')
     }
   }
 
-  // Conversie necesară pentru cheia VAPID
-  function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  // Utilitar pentru convertirea cheii din base64 în Uint8Array
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
     const base64 = (base64String + padding)
       .replace(/-/g, '+')
       .replace(/_/g, '/')
@@ -117,31 +205,10 @@ export default function AdminNotificationSubscription() {
     for (let i = 0; i < rawData.length; ++i) {
       outputArray[i] = rawData.charCodeAt(i)
     }
+    
     return outputArray
   }
 
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    return null // Browserul nu suportă push notifications
-  }
-
-  return (
-    <div className="mt-4">
-      {!isSubscribed ? (
-        <button
-          onClick={subscribeToPushNotifications}
-          disabled={isSubscribing}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md disabled:opacity-70"
-        >
-          {isSubscribing ? 'Se procesează...' : 'Activează notificările de administrator'}
-        </button>
-      ) : (
-        <p className="text-sm text-green-600 flex items-center">
-          <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          Notificările de administrator sunt activate
-        </p>
-      )}
-    </div>
-  )
+  // Nu afișăm nimic în UI, componenta gestionează doar abonamentele
+  return null
 } 

@@ -12,7 +12,7 @@ export default function AdminDashboard() {
   const { user, supabase } = useAuth()
   const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     totalOrders: 0,
     totalSales: 0,
@@ -23,80 +23,91 @@ export default function AdminDashboard() {
   })
 
   useEffect(() => {
-    const checkAdmin = async () => {
-      setTimeout(async () => {
-        setIsLoading(true)
+    // Verifică dacă utilizatorul este autentificat
+    if (!user) {
+      router.push('/login?redirect=/admin/dashboard')
+      return
+    }
+
+    // Verifică dacă utilizatorul este admin
+    const checkAdminStatus = async () => {
+      try {
+        setLoading(true)
         
-        if (!user) {
-          const { data: { session } } = await supabase.auth.getSession()
+        // Întâi, verificăm dacă există un profil
+        const { data: existingProfile, error: checkError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id);
           
-          if (!session?.user) {
-            console.log("Nu s-a găsit nicio sesiune activă");
-            router.push('/login?redirect=/admin/dashboard')
-            return
-          }
+        if (checkError) throw checkError;
+        
+        // Dacă nu există profil, îl creăm
+        if (!existingProfile || existingProfile.length === 0) {
+          console.log('Creating new profile for user:', user.id);
           
-          const userId = session.user.id
-          console.log("ID utilizator din sesiune:", userId)
-          
-          const { data: profile, error } = await supabase
+          const { error: insertError } = await supabase
             .from('profiles')
-            .select('is_admin')
-            .eq('id', userId)
-            .single()
-          
-          if (error) {
-            console.error('Eroare la verificarea profilului:', error)
-            router.push('/')
-            return
-          }
-          
-          if (!profile || !profile.is_admin) {
-            console.log("Utilizatorul nu are rol de admin")
-            router.push('/')
-            return
-          }
-          
-          console.log("Autentificare admin reușită")
-          setIsAdmin(true)
-          loadStats()
-        } else {
-          try {
-            console.log("Verificare admin pentru utilizatorul:", user.id)
+            .insert({
+              id: user.id,
+              email: user.email,
+              is_admin: false,
+              updated_at: new Date().toISOString()
+            });
             
-            const { data: profile, error } = await supabase
-              .from('profiles')
-              .select('is_admin')
-              .eq('id', user.id)
-              .single()
-            
-            if (error) throw error
-            
-            if (!profile || !profile.is_admin) {
-              console.log("Utilizatorul nu are rol de admin")
-              router.push('/')
-              return
-            }
-            
-            console.log("Autentificare admin reușită")
-            setIsAdmin(true)
-            loadStats()
-          } catch (error) {
-            console.error('Eroare la verificarea rolului admin:', error)
-            router.push('/')
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+            setIsAdmin(false);
+            return;
           }
         }
         
-        setIsLoading(false)
-      }, 500)
-    }
+        // Verificăm statusul de admin într-un mod mai robust
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .maybeSingle(); // Folosește maybeSingle() în loc de single()
+        
+        if (error) throw error;
+        
+        // Dacă nu există profil, îl creăm
+        if (!profile) {
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              email: user.email,
+              is_admin: false,
+              updated_at: new Date().toISOString()
+            });
+          
+          if (insertError) throw insertError;
+          setIsAdmin(false);
+        } else {
+          // Profilul există, verificăm statusul de admin
+          console.log('Admin status from DB:', profile.is_admin);
+          setIsAdmin(!!profile.is_admin);
+          
+          // Dacă este admin, încărcăm statisticile
+          if (profile.is_admin) {
+            await loadStats();
+          }
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    checkAdmin()
-  }, [user, router, supabase])
+    checkAdminStatus();
+  }, [user, router, supabase]);
 
   const loadStats = async () => {
     try {
-      setIsLoading(true)
+      setLoading(true)
       
       // Comenzi totale
       const { count: totalOrders, error: ordersError } = await supabase
@@ -125,11 +136,11 @@ export default function AdminDashboard() {
       
       if (customersError) throw customersError
       
-      // Comenzi în așteptare
+      // Comenzi în așteptare - MODIFICAT: caută ambele statusuri 'pending' și 'processing'
       const { count: pendingOrders, error: pendingError } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
+        .in('status', ['pending', 'processing']) // MODIFICARE: include ambele statusuri
       
       if (pendingError) throw pendingError
       
@@ -191,7 +202,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error loading dashboard data:', error)
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
@@ -263,7 +274,28 @@ export default function AdminDashboard() {
     }
   }
 
-  if (isLoading) {
+  // Funcția de obținere a comenzilor
+  const fetchOrders = async () => {
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('*, user:profiles(email)')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Eroare la obținerea comenzilor:', error);
+      return [];
+    }
+    
+    // Returnăm comenzile cu datele formatate
+    return orders.map(order => ({
+      ...order,
+      client: order.user?.email || 'Utilizator necunoscut',
+      // Asigură-te că statusul este salvat corect
+      status: order.status || 'processing' // Valoare implicită dacă statusul lipsește
+    }));
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -272,7 +304,20 @@ export default function AdminDashboard() {
   }
 
   if (!isAdmin) {
-    return null // Will redirect in useEffect
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
+          <p className="text-gray-600">You do not have permission to access this page.</p>
+          <button
+            onClick={() => router.push('/')}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (

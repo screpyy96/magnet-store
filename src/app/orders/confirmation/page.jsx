@@ -1,11 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
+import React from 'react'
 
-export default function OrderConfirmation() {
+// Loading component for Suspense
+function ConfirmationLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading order confirmation...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main content component
+function OrderConfirmationContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user, supabase } = useAuth()
@@ -161,12 +175,22 @@ export default function OrderConfirmation() {
           {order.order_items.map((item) => (
             <div key={item.id} className="p-6 flex items-center">
               <div className="w-16 h-16 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden mr-4">
-                {item.image_url && (
+                {(item.image_url || item.fileData || item.image) ? (
                   <img
-                    src={item.image_url}
+                    src={item.image_url || item.fileData || item.image}
                     alt={item.product_name}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error("Error loading image:", e);
+                      e.target.src = "/placeholder-magnet.png";
+                    }}
                   />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
                 )}
               </div>
               <div className="flex-1">
@@ -225,4 +249,13 @@ export default function OrderConfirmation() {
       </div>
     </div>
   )
+}
+
+// Export the wrapped component with Suspense
+export default function OrderConfirmation() {
+  return (
+    <Suspense fallback={<ConfirmationLoading />}>
+      <OrderConfirmationContent />
+    </Suspense>
+  );
 } 

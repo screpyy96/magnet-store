@@ -6,122 +6,119 @@ import { Bell, BellOff } from 'lucide-react';
 
 export default function PushNotificationSubscriber() {
   const { user } = useAuth();
+  const [subscription, setSubscription] = useState(null);
+  const [registration, setRegistration] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [swRegistration, setSwRegistration] = useState(null);
+  const [isSupported, setIsSupported] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      // Înregistrăm service worker-ul
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => {
-          setSwRegistration(registration);
-          
-          // Verificăm dacă există deja un abonament activ
-          return registration.pushManager.getSubscription();
-        })
-        .then(subscription => {
-          setIsSubscribed(!!subscription);
-        })
-        .catch(err => {
-          console.error('Service Worker registration failed:', err);
-        });
+    // Verificăm suportul pentru notificări 
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.log('Push notifications not supported');
+      setIsSupported(false);
+      return;
     }
+
+    const registerServiceWorker = async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('/service-worker.js');
+        setRegistration(reg);
+        
+        // Verifică dacă există deja un abonament
+        const existingSub = await reg.pushManager.getSubscription();
+        
+        if (existingSub) {
+          setSubscription(existingSub);
+          setIsSubscribed(true);
+        }
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+      }
+    };
+
+    registerServiceWorker();
   }, []);
 
-  // Funcție pentru abonare
-  const subscribeUser = async () => {
-    if (!swRegistration || !user) return;
-    
-    setIsLoading(true);
+  const subscribeToNotifications = async () => {
+    if (!registration || !user) return;
     
     try {
-      // Obținem cheia publică de la server
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) {
-        throw new Error('VAPID public key not found');
-      }
+      setLoading(true);
       
-      // Convertim cheia în ArrayBuffer pentru API-ul PushManager
-      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
-      
-      // Obținem abonamentul de la browser
-      const subscription = await swRegistration.pushManager.subscribe({
+      const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: applicationServerKey
+        applicationServerKey: urlBase64ToUint8Array(
+          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+        )
       });
       
-      // Trimitem abonamentul la server
-      const isAdmin = user.role === 'admin'; // Sau orice logică determină un admin
-      const endpoint = isAdmin ? '/api/notifications/subscribe-admin' : '/api/notifications/subscribe';
+      setSubscription(subscription);
       
-      const response = await fetch(endpoint, {
+      // Trimite abonamentul la server
+      const response = await fetch('/api/notifications/subscribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          subscription: subscription
-        })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(subscription)
       });
       
       if (!response.ok) {
-        throw new Error('Failed to save subscription');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save subscription');
       }
       
       setIsSubscribed(true);
+      console.log('Successfully subscribed to push notifications');
+      
     } catch (error) {
-      console.error('Failed to subscribe to push notifications:', error);
-      alert('Nu am putut activa notificările push. Te rugăm să încerci din nou.');
+      console.error('Error subscribing to push notifications:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Funcție pentru dezabonare
-  const unsubscribeUser = async () => {
-    if (!swRegistration) return;
-    
-    setIsLoading(true);
+  const unsubscribeFromNotifications = async () => {
+    if (!subscription) return;
     
     try {
-      // Obținem abonamentul curent
-      const subscription = await swRegistration.pushManager.getSubscription();
+      setLoading(true);
       
-      if (subscription) {
-        // Dezabonăm de la browser
-        await subscription.unsubscribe();
-        
-        // Ștergem abonamentul din baza de date
-        const isAdmin = user.role === 'admin';
-        const endpoint = isAdmin ? '/api/notifications/unsubscribe-admin' : '/api/notifications/unsubscribe';
-        
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            endpoint: subscription.endpoint
-          })
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to remove subscription from server');
-        }
-        
-        setIsSubscribed(false);
+      // Anulează abonamentul local
+      await subscription.unsubscribe();
+      
+      // Informează serverul
+      const response = await fetch('/api/notifications/unsubscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ subscription })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to unsubscribe');
       }
+      
+      setSubscription(null);
+      setIsSubscribed(false);
+      console.log('Successfully unsubscribed from push notifications');
+      
     } catch (error) {
-      console.error('Failed to unsubscribe from push notifications:', error);
-      alert('Nu am putut dezactiva notificările. Te rugăm să încerci din nou.');
+      console.error('Error unsubscribing from push notifications:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Funcție utilitară pentru convertirea cheii BASE64
-  function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  // Utilitar pentru conversie
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
     
     const rawData = window.atob(base64);
     const outputArray = new Uint8Array(rawData.length);
@@ -129,40 +126,57 @@ export default function PushNotificationSubscriber() {
     for (let i = 0; i < rawData.length; ++i) {
       outputArray[i] = rawData.charCodeAt(i);
     }
+    
     return outputArray;
-  }
+  };
 
-  // Dacă Push API nu este suportat
-  if (!('serviceWorker' in navigator && 'PushManager' in window)) {
+  if (!isSupported) {
     return (
-      <div className="text-gray-500 text-sm py-2">
-        <BellOff className="h-4 w-4 inline mr-1" />
-        Browserul tău nu suportă notificări push
+      <div className="py-3 px-4 bg-gray-50 rounded-lg">
+        <p className="text-sm text-gray-500">
+          Push notifications are not supported in your browser.
+        </p>
       </div>
     );
   }
 
-  // Dacă nu există un utilizator autentificat
   if (!user) {
     return null;
   }
 
   return (
-    <button
-      onClick={isSubscribed ? unsubscribeUser : subscribeUser}
-      disabled={isLoading}
-      className={`flex items-center px-4 py-2 rounded-md transition-colors ${
-        isSubscribed 
-          ? 'bg-pink-50 text-pink-600 hover:bg-pink-100' 
-          : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-      } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-    >
-      {isLoading ? (
-        <span className="h-4 w-4 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mr-2" />
-      ) : (
-        isSubscribed ? <Bell className="h-4 w-4 mr-2" /> : <BellOff className="h-4 w-4 mr-2" />
-      )}
-      {isSubscribed ? 'Dezactivează notificările' : 'Activează notificările'}
-    </button>
+    <div className="py-4">
+      <h3 className="text-lg font-medium text-gray-900 mb-3">Push Notifications</h3>
+      
+      <p className="text-sm text-gray-500 mb-4">
+        {isSubscribed 
+          ? "You're subscribed to push notifications for new order updates." 
+          : "Subscribe to receive push notifications for new order updates."}
+      </p>
+      
+      <button
+        onClick={isSubscribed ? unsubscribeFromNotifications : subscribeToNotifications}
+        disabled={loading}
+        className={`inline-flex items-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+          isSubscribed 
+            ? "border-gray-300 text-gray-700 bg-white hover:bg-gray-50" 
+            : "border-transparent text-white bg-indigo-600 hover:bg-indigo-700"
+        } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+      >
+        {loading ? (
+          <>
+            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Processing...
+          </>
+        ) : isSubscribed ? (
+          'Unsubscribe'
+        ) : (
+          'Subscribe to Notifications'
+        )}
+      </button>
+    </div>
   );
 } 

@@ -29,9 +29,9 @@ export default function ContactPage() {
     setSubmitSuccess(false)
     setSubmitError(false)
     
-    // Simulăm trimiterea formularului
+    // Simulate form submission
     try {
-      // Aici ar trebui să fie codul pentru trimiterea formularului către server
+      // Here would be the code to send the form to the server
       await new Promise(resolve => setTimeout(resolve, 1500))
       setSubmitSuccess(true)
       setFormData({
@@ -81,7 +81,7 @@ export default function ContactPage() {
   const faqs = [
     {
       question: 'How long does shipping take?',
-      answer: 'Standard shipping takes 3-5 business days within Romania. International shipping may take 7-14 business days depending on the destination.'
+      answer: 'Standard shipping takes 2-3 business days within the UK. International shipping may take 7-14 business days depending on the destination.'
     },
     {
       question: 'What file formats do you accept for custom magnets?',

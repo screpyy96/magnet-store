@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 export default function OrdersManagement() {
-  const { user } = useAuth()
+  const { user, supabase } = useAuth()
   const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -23,31 +23,67 @@ export default function OrdersManagement() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/login')
+      router.push('/login?redirect=/admin/orders')
       return
     }
 
     const checkAdminStatus = async () => {
       try {
-        // Check if user is admin
-        const { data, error } = await supabase
+        setLoading(true)
+        
+        console.log('Checking admin status for:', user.id)
+        
+        // Mai întâi, verificăm dacă există un profil pentru utilizator
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('is_admin')
           .eq('id', user.id)
-          .single()
-
-        if (error) throw error
-
-        if (!data || !data.is_admin) {
-          // Not an admin, redirect to home
+          .maybeSingle() // Folosim maybeSingle în loc de single
+        
+        if (profileError) {
+          console.error('Error checking profile:', profileError)
+          throw profileError
+        }
+        
+        console.log('Profile data received:', profileData)
+        
+        // Dacă profilul nu există, îl creăm
+        if (!profileData) {
+          console.log('Creating new profile for user:', user.id)
+          
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              email: user.email,
+              is_admin: false, // Implicit nu este admin
+              updated_at: new Date().toISOString()
+            })
+          
+          if (createError) {
+            console.error('Error creating profile:', createError)
+            throw createError
+          }
+          
+          setIsAdmin(false)
           router.push('/')
           return
         }
-
+        
+        // Verificăm dacă utilizatorul este admin
+        if (!profileData.is_admin) {
+          console.log('User is not an admin:', profileData)
+          setIsAdmin(false)
+          router.push('/')
+          return
+        }
+        
+        console.log('User is admin, loading orders')
         setIsAdmin(true)
         await loadOrders()
       } catch (error) {
         console.error('Error checking admin status:', error)
+        setIsAdmin(false)
         router.push('/')
       } finally {
         setLoading(false)
@@ -55,7 +91,7 @@ export default function OrdersManagement() {
     }
 
     checkAdminStatus()
-  }, [user, router, filter, searchTerm, pagination.page])
+  }, [user, router, filter, searchTerm, pagination.page, supabase])
 
   const loadOrders = async () => {
     try {
@@ -200,7 +236,7 @@ export default function OrdersManagement() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     )
   }

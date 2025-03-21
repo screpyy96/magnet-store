@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import Cropper from "react-easy-crop"
 
 export default function ImageEditor({ file, onSave, onCancel }) {
@@ -14,6 +14,11 @@ export default function ImageEditor({ file, onSave, onCancel }) {
   const [textColor, setTextColor] = useState("#ffffff")
   const [textSize, setTextSize] = useState(24)
   const [textPosition, setTextPosition] = useState({ x: 50, y: 50 })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  
+  // Definim referința lipsă
+  const imageRef = useRef(null)
 
   // Load image when file changes
   useEffect(() => {
@@ -82,23 +87,23 @@ export default function ImageEditor({ file, onSave, onCancel }) {
         outputSize
       )
       
-      // Adăugăm textul dacă există
+      // Add text if it exists
       if (text) {
-        // Restaurăm contextul pentru text (fără rotație)
+        // Restore context for text (without rotation)
         ctx.restore()
         ctx.save()
         
-        // Configurăm fontul
+        // Configure the font
         ctx.font = `bold ${textSize}px Arial, sans-serif`
         ctx.fillStyle = textColor
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
         
-        // Calculăm poziția bazată pe procentaj
+        // Calculate position based on percentage
         const xPos = (textPosition.x / 100) * canvas.width
         const yPos = (textPosition.y / 100) * canvas.height
         
-        // Adăugăm efect de stroke/contur pentru a face textul mai vizibil
+        // Add stroke/outline effect to make text more visible
         ctx.strokeStyle = textColor === "#ffffff" ? "#000000" : "#ffffff"
         ctx.lineWidth = 2
         ctx.strokeText(text, xPos, yPos)
@@ -108,21 +113,8 @@ export default function ImageEditor({ file, onSave, onCancel }) {
       // Restore context
       ctx.restore()
       
-      // Convert to blob
-      return new Promise((resolve) => {
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              console.error("Failed to create blob")
-              resolve(null)
-              return
-            }
-            resolve(blob)
-          },
-          "image/jpeg",
-          0.95 // High quality
-        )
-      })
+      // Convert to base64 string directly - MODIFIED (canvas.toDataURL doesn't accept callback)
+      return canvas.toDataURL('image/jpeg', 0.95);
     } catch (e) {
       console.error("Error creating cropped image:", e)
       return null
@@ -131,13 +123,29 @@ export default function ImageEditor({ file, onSave, onCancel }) {
 
   const handleSave = async () => {
     try {
-      if (!croppedAreaPixels) return
-      const croppedImage = await createCroppedImage()
-      if (croppedImage) {
-        onSave(croppedImage)
+      setLoading(true)
+      setError(null)
+      
+      // Use createCroppedImage instead of relying on imageRef
+      const croppedImageBase64 = await createCroppedImage()
+      
+      if (!croppedImageBase64) {
+        throw new Error('Could not process image')
       }
-    } catch (e) {
-      console.error("Error saving image:", e)
+      
+      // Convert base64 to Blob
+      const fetchRes = await fetch(croppedImageBase64)
+      const blob = await fetchRes.blob()
+      
+      // Call the save function from parent
+      const imageUrl = await onSave(blob)
+      console.log('Image saved successfully:', imageUrl)
+      
+    } catch (error) {
+      console.error('Error in handleSave:', error)
+      setError(error.message || 'Failed to save image')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -404,5 +412,15 @@ export default function ImageEditor({ file, onSave, onCancel }) {
       </div>
     </div>
   )
+}
+
+// Exemplu de conversie Blob -> base64
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 

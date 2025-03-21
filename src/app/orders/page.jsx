@@ -23,29 +23,86 @@ export default function Orders() {
 
     const fetchOrders = async () => {
       try {
+        // Get orders
         const { data, error } = await supabase
           .from('orders')
           .select(`
             *,
             order_items (
+              id,
               quantity,
               price_per_unit,
-              image_url
-            ),
-            shipping_addresses (
-              full_name,
-              city,
-              postal_code
+              image_url,
+              size,
+              product_name,
+              special_requirements
             )
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
 
-        if (error) throw error
-        setOrders(data || [])
+        if (error) {
+          console.error('Error fetching orders data:', error);
+          throw error;
+        }
+        
+        if (!data || data.length === 0) {
+          console.log('No orders found for user:', user.id);
+          setOrders([]);
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log('Orders fetched successfully:', data.length);
+        
+        // Add shipping addresses separately
+        try {
+          const ordersWithAddresses = await Promise.all(data.map(async (order) => {
+            if (order.shipping_address_id) {
+              try {
+                // Get shipping address for each order
+                const { data: addressData, error: addressError } = await supabase
+                  .from('shipping_addresses')
+                  .select('full_name, city, postal_code')
+                  .eq('id', order.shipping_address_id)
+                  .single()
+                
+                if (addressError) {
+                  console.error(`Error fetching address for order ${order.id}:`, addressError);
+                  return {
+                    ...order,
+                    shipping_addresses: null
+                  };
+                }
+                  
+                return {
+                  ...order,
+                  shipping_addresses: addressData || null
+                }
+              } catch (addressFetchError) {
+                console.error(`Error processing address for order ${order.id}:`, addressFetchError);
+                return {
+                  ...order,
+                  shipping_addresses: null
+                };
+              }
+            }
+            return {
+              ...order,
+              shipping_addresses: null
+            }
+          }))
+          
+          console.log('Orders with addresses processed:', ordersWithAddresses.length);
+          setOrders(ordersWithAddresses || []);
+        } catch (addressesError) {
+          console.error('Error processing addresses:', addressesError);
+          // Display orders without addresses in case of error
+          setOrders(data || []);
+        }
       } catch (error) {
-        console.error('Error fetching orders:', error)
-        setError('Failed to load orders')
+        console.error('Error fetching orders:', error);
+        setError(error?.message || error?.details || 'Failed to load orders');
       } finally {
         setIsLoading(false)
       }
@@ -166,11 +223,23 @@ export default function Orders() {
                           className="w-12 h-12 rounded-lg border-2 border-white overflow-hidden shadow-sm"
                           style={{ marginLeft: index > 0 ? '-0.5rem' : '0' }}
                         >
-                          <img
-                            src={item.image_url}
-                            alt={`Order item ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
+                          {item.image_url ? (
+                            <img
+                              src={item.image_url}
+                              alt={`Order item ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                console.error("Error loading image:", e);
+                                e.target.src = "/placeholder-magnet.png";
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -179,7 +248,7 @@ export default function Orders() {
                         {order.order_items.length} {order.order_items.length === 1 ? 'item' : 'items'}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Shipping to: {order.shipping_addresses.full_name}
+                        Shipping to: {order.shipping_addresses?.full_name}
                       </p>
                     </div>
                   </div>

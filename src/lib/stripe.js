@@ -1,27 +1,21 @@
-import { loadStripe } from '@stripe/stripe-js'
+import Stripe from 'stripe'
 
-// Load the Stripe publishable key from environment variable
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16', // folosește ultima versiune
+  typescript: true,
+})
 
-export default stripePromise
-
-// Helper function to format card errors
 export const formatCardError = (error) => {
-  const knownErrors = {
-    'card_declined': 'Card was declined. Please try another card.',
-    'expired_card': 'Card is expired. Please try another card.',
-    'incorrect_cvc': 'CVC code is incorrect. Please check and try again.',
-    'incorrect_number': 'Card number is incorrect. Please check and try again.',
-    'incomplete_number': 'Card number is incomplete. Please check and try again.',
-    'incomplete_cvc': 'CVC code is incomplete. Please check and try again.',
-    'incomplete_expiry': 'Expiry date is incomplete. Please check and try again.',
-    'invalid_expiry_month': 'Expiry month is invalid. Please check and try again.',
-    'invalid_expiry_year': 'Expiry year is invalid. Please check and try again.',
+  switch (error.code) {
+    case 'card_declined':
+      return 'Your card was declined. Please try another card.'
+    case 'expired_card':
+      return 'Your card has expired. Please try another card.'
+    case 'incorrect_cvc':
+      return 'The CVC number is incorrect. Please try again.'
+    case 'processing_error':
+      return 'There was an error processing your card. Please try again.'
+    default:
+      return 'There was an error with your payment. Please try again.'
   }
-
-  if (error.type === 'card_error' || error.type === 'validation_error') {
-    return knownErrors[error.code] || error.message
-  }
-  
-  return 'An unexpected error occurred. Please try again later.'
 } 

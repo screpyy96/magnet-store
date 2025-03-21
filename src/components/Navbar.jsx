@@ -3,17 +3,61 @@
 import Link from "next/link"
 import { useAuth } from "@/contexts/AuthContext"
 import { useState, useRef, useEffect } from "react"
-import { usePathname, useRouter } from 'next/navigation'
-import { HiHome, HiViewGrid, HiCamera, HiUser, HiTruck } from 'react-icons/hi'
+import { usePathname } from 'next/navigation'
+import { HiHome, HiViewGrid, HiCamera, HiUser, HiTruck, HiTemplate } from 'react-icons/hi'
 import Cart from './Cart'
 import { AnimatePresence, motion } from 'framer-motion'
 
 export default function Navbar() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, supabase } = useAuth()
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const pathname = usePathname()
-  const router = useRouter()
   const menuRef = useRef(null)
+
+  // Verifică dacă utilizatorul este admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false)
+        return
+      }
+
+      try {
+        // Folosim localStorage pentru a păstra starea de admin între refresh-uri
+        const cachedAdminStatus = localStorage.getItem(`admin_status_${user.id}`)
+        
+        // Setăm temporar starea din cache dacă există
+        if (cachedAdminStatus) {
+          setIsAdmin(cachedAdminStatus === 'true')
+        }
+        
+        // Apoi verificăm din nou din baza de date
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (error) {
+          console.error('Error checking admin status:', error)
+          setIsAdmin(false)
+          return
+        }
+
+        const isAdminValue = !!data?.is_admin
+        setIsAdmin(isAdminValue)
+        
+        // Salvăm în localStorage pentru referințe viitoare
+        localStorage.setItem(`admin_status_${user.id}`, isAdminValue.toString())
+      } catch (error) {
+        console.error('Error in admin check:', error)
+        setIsAdmin(false)
+      }
+    }
+
+    checkAdminStatus()
+  }, [user, supabase])
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -27,16 +71,26 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const mobileNavItems = [
-    { name: 'Home', href: '/', icon: HiHome },
-    { name: 'Products', href: '/products', icon: HiViewGrid },
-    { name: 'Create', href: '/custom', icon: HiCamera },
-    { 
+  // Construiește elementele de navigare mobilă, adăugând Dashboard dacă utilizatorul este admin
+  const buildMobileNavItems = () => {
+    const items = [
+      { name: 'Home', href: '/', icon: HiHome },
+      { name: 'Products', href: '/products', icon: HiViewGrid },
+      { name: 'Create', href: '/custom', icon: HiCamera },
+    ]
+
+
+    // Adaugă elementul pentru cont/autentificare
+    items.push({ 
       name: user ? 'Account' : 'Sign In', 
       href: user ? '/account' : '/login?redirect=/custom', 
       icon: HiUser 
-    }
-  ]
+    })
+
+    return items
+  }
+
+  const mobileNavItems = buildMobileNavItems()
 
   return (
     <>
@@ -70,6 +124,15 @@ export default function Navbar() {
                 <Link href="/contact" className="text-gray-700 hover:text-indigo-600 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-indigo-600">
                   Contact
                 </Link>
+                {/* Dashboard Link - doar pentru admin
+                {isAdmin && (
+                  <Link 
+                    href="/admin/dashboard" 
+                    className="text-indigo-600 hover:text-indigo-700 inline-flex items-center px-1 pt-1 border-b-2 border-indigo-600"
+                  >
+                    Dashboard
+                  </Link>
+                )} */}
               </div>
             </div>
 
@@ -129,6 +192,19 @@ export default function Navbar() {
                             </svg>
                             <span>Orders</span>
                           </Link>
+                          {/* Link Dashboard în meniul dropdown */}
+                          {isAdmin && (
+                            <Link 
+                              href="/admin/dashboard" 
+                              onClick={() => setIsProfileMenuOpen(false)}
+                              className="flex items-center px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 space-x-3"
+                            >
+                              <svg className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                              </svg>
+                              <span>Admin Dashboard</span>
+                            </Link>
+                          )}
                           <button
                             onClick={() => signOut()}
                             className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 space-x-3"
@@ -157,9 +233,9 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation - păstrăm navigarea existentă */}
+      {/* Mobile Bottom Navigation */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-        <div className="grid grid-cols-4 h-16">
+        <div className={`grid ${mobileNavItems.length === 5 ? 'grid-cols-5' : 'grid-cols-4'} h-16`}>
           {mobileNavItems.map((item) => {
             const isActive = pathname === item.href
             return (
