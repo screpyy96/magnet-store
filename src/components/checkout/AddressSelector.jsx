@@ -66,10 +66,17 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }) {
         return;
       }
 
-      // Adăugăm userId la adresă
+      // Convert camelCase keys to snake_case for database
       const addressWithUserId = {
-        ...newAddress,
         user_id: user.id,
+        full_name: newAddress.fullName,
+        address_line1: newAddress.addressLine1,
+        address_line2: newAddress.addressLine2 || '',
+        city: newAddress.city,
+        county: newAddress.county,
+        postal_code: newAddress.postalCode,
+        country: newAddress.country,
+        phone: newAddress.phone,
         is_default: true  // Setăm această adresă ca implicită
       };
 
@@ -107,6 +114,8 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }) {
       // Adăugăm noua adresă la lista și o setăm ca selectată
       if (data && data.length > 0) {
         const newAddressFromDB = data[0];
+        
+        // Map the address fields back from snake_case to camelCase for the UI if needed
         setAddresses(prevAddresses => [...prevAddresses, newAddressFromDB]);
         onAddressSelect(newAddressFromDB);
         setAddingNewAddress(false);

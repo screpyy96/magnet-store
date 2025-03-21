@@ -192,7 +192,7 @@ export async function POST(request) {
           user_id: user_id,
           status: 'processing',
           total_price: totalPrice,
-          shipping_address: `${addressData.street}, ${addressData.city}, ${addressData.postal_code}`,
+          shipping_address: addressData ? `${addressData.address_line1}, ${addressData.city}, ${addressData.postal_code}` : '',
           shipping_address_id: shippingAddressId,
           shipping_method: 'standard',
           shipping_cost: shippingCost,
@@ -321,40 +321,18 @@ async function sendAdminNotification(supabaseClient, orderId, orderDetails) {
       process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY
     );
     
-    // Obține toți administratorii din sistem
-    const { data: admins, error: adminError } = await supabaseClient
-      .from('profiles')
-      .select('id')
-      .eq('is_admin', true);
-    
-    if (adminError) {
-      console.error('Error fetching admin users:', adminError);
-      return;
-    }
-    
-    if (!admins || admins.length === 0) {
-      console.log('No admin users found in the system');
-      return;
-    }
-    
-    console.log('Found admin users:', admins.length);
-    
-    // Obține toate abonamentele push pentru administratori
-    const adminIds = admins.map(admin => admin.id);
-    
+    // Get all admin push subscriptions directly from admin_push_subscriptions table (plural)
     const { data: subscriptions, error: subError } = await supabaseClient
-      .from('push_subscriptions')
-      .select('*')
-      .in('user_id', adminIds);
+      .from('admin_push_subscriptions')
+      .select('*');
     
     if (subError) {
-      console.error('Error fetching push subscriptions:', subError);
+      console.error('Error fetching admin push subscriptions:', subError);
       return;
     }
     
     if (!subscriptions || subscriptions.length === 0) {
-      console.log('No push subscriptions found for admin users');
-      console.log('Admin IDs checked:', adminIds);
+      console.log('No admin push subscriptions found');
       return;
     }
     
@@ -371,8 +349,8 @@ async function sendAdminNotification(supabaseClient, orderId, orderDetails) {
     
     // Pregătește payload-ul pentru notificare
     const payload = JSON.stringify({
-      title: 'Comandă nouă!',
-      body: `Comanda #${orderId.substring(0, 8)} în valoare de £${orderDetails.total.toFixed(2)}`,
+      title: 'New Order!',
+      body: `Order #${orderId.substring(0, 8)} for £${orderDetails.total.toFixed(2)}`,
       data: {
         orderId: orderId,
         total: orderDetails.total,
@@ -406,7 +384,7 @@ async function sendAdminNotification(supabaseClient, orderId, orderDetails) {
           if (error.statusCode === 404 || error.statusCode === 410) {
             console.log('Subscription expired or invalid, removing from database');
             return supabaseClient
-              .from('push_subscriptions')
+              .from('admin_push_subscriptions')
               .delete()
               .eq('endpoint', subscription.endpoint);
           }

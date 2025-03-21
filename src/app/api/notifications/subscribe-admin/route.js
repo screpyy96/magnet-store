@@ -115,7 +115,7 @@ export async function POST(request) {
     
     // Salvăm abonamentul în baza de date
     const { error: subscriptionError } = await supabase
-      .from('admin_push_subscription')
+      .from('admin_push_subscriptions')
       .upsert({
         endpoint: subscriptionToStore.endpoint,
         subscription: subscriptionToStore,
