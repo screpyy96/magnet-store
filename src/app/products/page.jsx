@@ -21,7 +21,7 @@ export default function ProductsPage() {
       category: 'single',
       badge: 'Most Popular',
       sizes: ['5x5cm'],
-      finishes: ['Flexible', 'Rigid']
+      finishes: [ 'Rigid']
     },
     {
       id: 'pack-6',

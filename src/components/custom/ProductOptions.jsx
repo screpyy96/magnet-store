@@ -11,12 +11,7 @@ const SIZES = [
 ];
 
 const FINISHES = [
-  {
-    id: 'flexible',
-    name: 'Flexible',
-    description: 'Bendable magnetic material, perfect for curved surfaces',
-    popular: true
-  },
+  
   {
     id: 'rigid',
     name: 'Rigid',
