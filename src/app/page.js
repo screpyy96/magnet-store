@@ -36,7 +36,7 @@ export default function Home() {
       <FAQ />
 
       {/* Newsletter Signup */}
-      <NewsletterSignup />
+      {/* <NewsletterSignup /> - Moved to popup */}
     </div>
   );
 }
