@@ -1,0 +1,44 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://mysweetmagnets.co.uk/sitemap.xml
+
+# Disallow admin and API routes
+Disallow: /admin
+Disallow: /api
+Disallow: /account
+Disallow: /checkout
+Disallow: /cart
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+
+# Crawl-delay: 10  # Uncomment if needed to prevent server overload
+
+# Allow all JS and CSS files for proper rendering
+Allow: /*.js$
+Allow: /*.css$
+
+# Image crawling
+Allow: /images/*.jpg$
+Allow: /images/*.png$
+Allow: /images/*.webp$
+
+# Media files
+Allow: /_next/static/*
+Allow: /_next/image*
+
+# Block search parameter URLs to prevent duplicate content
+Disallow: /*?*search=*
+Disallow: /*?*sort=*
+Disallow: /*?*page=*
+
+# Block non-essential parameters
+Disallow: /*?*ref=*
+Disallow: /*?*utm_*
+
+# Block development and staging environments
+Disallow: /*?*debug=*
+Disallow: /*?*preview=*
