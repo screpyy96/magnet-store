@@ -6,6 +6,16 @@ export function createClient() {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
   if (!supabaseUrl || !supabaseKey) {
+    // During build time, environment variables might not be available
+    if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+      console.warn('Supabase environment variables not available during build');
+      // Return a mock client for build-time
+      return {
+        from: () => ({ select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }) }),
+        storage: { from: () => ({ upload: () => Promise.resolve({ data: null, error: null }) }) },
+        auth: { getUser: () => Promise.resolve({ data: { user: null }, error: null }) }
+      }
+    }
     throw new Error(`Supabase configuration missing: URL=${!!supabaseUrl}, KEY=${!!supabaseKey}`)
   }
   
@@ -18,5 +28,13 @@ export function createClient() {
   })
 }
 
-// Legacy export for backward compatibility
-export const supabase = createClient()
+// Lazy-initialized singleton for legacy compatibility
+let supabaseInstance = null;
+export const supabase = new Proxy({}, {
+  get(target, prop) {
+    if (!supabaseInstance) {
+      supabaseInstance = createClient();
+    }
+    return supabaseInstance[prop];
+  }
+});
