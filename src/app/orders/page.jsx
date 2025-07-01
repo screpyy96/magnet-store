@@ -12,6 +12,7 @@ export default function Orders() {
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [updatingStatus, setUpdatingStatus] = useState({})
 
   useEffect(() => {
     if (isAuthLoading) return
@@ -160,6 +161,35 @@ export default function Orders() {
     })
   }
 
+  const handleStatusChange = async (orderId, newStatus) => {
+    if (!orderId || !newStatus) return;
+    
+    try {
+      setUpdatingStatus(prev => ({ ...prev, [orderId]: true }));
+      
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId)
+      
+      if (error) throw error;
+      
+      // Update local state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, status: newStatus } : order
+        )
+      );
+      
+      alert(`Order #${orderId} status updated to ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('An error occurred while updating the order status.');
+    } finally {
+      setUpdatingStatus(prev => ({ ...prev, [orderId]: false }));
+    }
+  }
+
   if (orders.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
@@ -197,23 +227,63 @@ export default function Orders() {
               className="block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200"
             >
               <div className="p-6">
-                <div className="sm:flex sm:items-center sm:justify-between">
-                  <div className="mb-4 sm:mb-0">
-                    <div className="flex items-center space-x-2 text-sm text-gray-500 mb-1">
-                      <span>Order placed</span>
-                      <span>•</span>
-                      <span>{formatDate(order.created_at)}</span>
+                <div className="sm:flex sm:items-start sm:justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      </span>
+                      {order.status !== 'cancelled' && order.status !== 'completed' && (
+                        <div className="relative">
+                          <select
+                            value={order.status}
+                            onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                            disabled={updatingStatus[order.id]}
+                            className="text-xs border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="completed">Complete Order</option>
+                            <option value="cancelled">Cancel Order</option>
+                          </select>
+                          {updatingStatus[order.id] && (
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                              <div className="w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm font-medium text-gray-900">Order #{order.id}</p>
+                    <div className="mb-4 sm:mb-0">
+                      <div className="flex items-center space-x-2 text-sm text-gray-500 mb-1">
+                        <span>Order placed</span>
+                        <span>•</span>
+                        <span>{formatDate(order.created_at)}</span>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900">
+                        Order #{order.id.substring(0, 8).toUpperCase()}
+                      </h3>
+                    </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </span>
-                    <span className="text-lg font-semibold text-gray-900">£{order.total.toFixed(2)}</span>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">
+                        £{order.total?.toFixed(2) || '0.00'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {order.order_items?.length} {order.order_items?.length === 1 ? 'item' : 'items'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">
+                        {order.shipping_addresses?.city || 'N/A'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {order.shipping_addresses?.postal_code || ''}
+                      </p>
+                    </div>
                   </div>
                 </div>
-
                 <div className="mt-4 border-t border-gray-100 pt-4">
                   <div className="flex items-center space-x-4">
                     <div className="flex -space-x-2">
@@ -248,7 +318,7 @@ export default function Orders() {
                         {order.order_items.length} {order.order_items.length === 1 ? 'item' : 'items'}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Shipping to: {order.shipping_addresses?.full_name}
+                        Shipping to: {order.shipping_addresses?.full_name || 'N/A'}
                       </p>
                     </div>
                   </div>

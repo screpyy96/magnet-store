@@ -14,17 +14,8 @@ export const getSupabase = () => {
   
   // Validate required config
   if (!supabaseUrl || !supabaseKey) {
-    console.error('Supabase configuration missing:', { 
-      urlExists: !!supabaseUrl, 
-      keyExists: !!supabaseKey 
-    })
     
-    // In production, use hardcoded values as fallback (same as .env.local)
-    // Only as a temporary solution while debugging
-    const fallbackUrl = 'https://wucwlqxuqgusthpllkgd.supabase.co'
-    const fallbackKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1Y3dscXh1cWd1c3RocGxsa2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM0MTkyNTgsImV4cCI6MjA0ODk5NTI1OH0.1cWoFPPN7TMbnyKu77nZGzLDUoD5ltKcubMy2zs925k'
-    
-    // Inițializează un nou client cu valorile implicite
+    // Initialize with fallback values for development
     try {
       supabaseInstance = createClient(
         supabaseUrl || fallbackUrl,
@@ -38,7 +29,6 @@ export const getSupabase = () => {
         }
       )
     } catch (error) {
-      console.error('Failed to initialize Supabase client:', error)
       throw new Error('Supabase initialization failed: ' + error.message)
     }
   } else {
@@ -56,7 +46,6 @@ export const getSupabase = () => {
         }
       )
     } catch (error) {
-      console.error('Failed to initialize Supabase client:', error)
       throw new Error('Supabase initialization failed: ' + error.message)
     }
   }

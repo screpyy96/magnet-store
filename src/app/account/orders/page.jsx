@@ -22,33 +22,30 @@ export default function OrdersPage() {
 
   const loadOrders = async () => {
     try {
-      setLoading(true)
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (*),
-          payment_transactions (*)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (ordersError) throw ordersError
-
-      console.log('Orders data:', ordersData)
-      ordersData?.forEach(order => {
-        order.order_items?.forEach(item => {
-          console.log('Item image URL:', item.image_url)
-        })
-      })
-
-      setOrders(ordersData)
+      setLoading(true);
+      
+      // Use the RPC function to get orders with items
+      const { data, error } = await supabase
+        .rpc('get_user_orders_with_items', {
+          user_id: user.id
+        });
+  
+      if (error) throw error;
+  
+      if (!data || !data.orders) {
+        console.log('No orders data returned');
+        setOrders([]);
+        return;
+      }
+  
+      console.log('Orders data:', data.orders);
+      setOrders(data.orders);
     } catch (error) {
-      console.error('Error loading orders:', error)
+      console.error('Error loading orders:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const getImageUrl = (item) => {
     // Returnăm direct URL-ul dacă există

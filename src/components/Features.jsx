@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Link from "next/link";
 
 export default function Features() {
   return (
@@ -38,7 +38,7 @@ export default function Features() {
                 Our advanced printing technology ensures your photos look vibrant and crystal clear on every magnet, preserving your memories in stunning detail.
               </p>
               
-              <ul className="space-y-2">
+              <ul className="space-y-2 mb-6">
                 <li className="flex items-center text-sm text-gray-500">
                   <svg className="w-4 h-4 mr-2 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -52,6 +52,15 @@ export default function Features() {
                   Vibrant, fade-resistant colors
                 </li>
               </ul>
+              <Link 
+                href="/products" 
+                className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 group"
+              >
+                See examples
+                <svg className="ml-1 w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           </div>
           
@@ -72,7 +81,7 @@ export default function Features() {
                 Made to last with strong magnetic backing and water-resistant coating, our magnets maintain their quality and strength for years to come.
               </p>
               
-              <ul className="space-y-2">
+              <ul className="space-y-2 mb-6">
                 <li className="flex items-center text-sm text-gray-500">
                   <svg className="w-4 h-4 mr-2 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -86,6 +95,15 @@ export default function Features() {
                   Strong magnetic backing
                 </li>
               </ul>
+              <Link 
+                href="/materials" 
+                className="inline-flex items-center text-sm font-medium text-purple-600 hover:text-purple-800 group"
+              >
+                Learn about our materials
+                <svg className="ml-1 w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           </div>
           
@@ -106,20 +124,29 @@ export default function Features() {
                 Surprise friends and family with personalized magnets that capture special moments and memories, creating a thoughtful gift they'll cherish.
               </p>
               
-              <ul className="space-y-2">
+              <ul className="space-y-2 mb-6">
                 <li className="flex items-center text-sm text-gray-500">
                   <svg className="w-4 h-4 mr-2 text-pink-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Custom gift packaging
+                  No minimum order
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <svg className="w-4 h-4 mr-2 text-pink-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Personalized message option
+                  Fast UK shipping
                 </li>
               </ul>
+              <Link 
+                href="/custom-order" 
+                className="inline-flex items-center text-sm font-medium text-pink-600 hover:text-pink-800 group"
+              >
+                Start designing now
+                <svg className="ml-1 w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           </div>
         </div>

@@ -1,276 +1,459 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { motion } from 'framer-motion'
 
 export default function ProductsPage() {
-  // Produse extinse cu mai multe opțiuni și categorii
+  const [activeCategory, setActiveCategory] = useState('all')
+
+  // Realistic magnet products based on the business
   const products = [
     {
-      id: 1,
-      name: 'Custom Photo Magnets',
-      description: 'Transform your favorite photos into beautiful magnets with our premium printing technology.',
-      features: ['High-quality printing', 'Durable materials', 'Square shape (7x7cm)'],
-      image: 'https://images.unsplash.com/photo-1591129841117-3adfd313e34f?w=800&q=80',
-      price: '9.99',
-      link: '/custom',
-      category: 'custom',
-      badge: 'Best Seller'
+      id: 'single-5x5',
+      name: '5cm × 5cm Photo Magnet',
+      description: 'Perfect size for single photos. High-quality flexible magnetic backing.',
+      features: ['5cm × 5cm square', 'Flexible vinyl finish', 'Strong magnetic hold', 'Weather resistant'],
+      image: '/images/magnet1.jpeg',
+      price: '5.00',
+      link: '/custom?qty=1',
+      category: 'single',
+      badge: 'Most Popular',
+      sizes: ['5x5cm'],
+      finishes: ['Flexible', 'Rigid']
     },
     {
-      id: 2,
-      name: 'Family Pack (5 Magnets)',
-      description: 'Create a collection of 5 custom magnets at a special discounted price.',
-      features: ['Save 15%', 'Mix different photos', 'Perfect gift for family'],
-      image: 'https://images.unsplash.com/photo-1596079890744-c1a0462d0975?w=800&q=80',
-      price: '39.99',
-      originalPrice: '49.95',
-      link: '/custom',
-      category: 'bundles',
-      badge: 'Value Pack'
+      id: 'pack-6',
+      name: '6-Pack Photo Magnets',
+      description: 'Share your favorite memories with family and friends. Great value pack.',
+      features: ['6 custom magnets', '£2.83 per magnet', 'Mix different photos', 'Perfect for gifting'],
+      image: '/images/magnet2.jpeg',
+      price: '17.00',
+      originalPrice: '30.00',
+      link: '/custom?qty=6',
+      category: 'bundle',
+      badge: 'Best Value',
+      savings: '43%'
     },
     {
-      id: 3,
-      name: 'Heart-Shaped Magnets',
-      description: 'Express your love with these beautiful heart-shaped custom photo magnets.',
-      features: ['Romantic design', 'Perfect for couples', 'Unique gift idea'],
-      image: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=800&q=80',
-      price: '12.99',
-      link: '/custom',
-      category: 'shapes',
-      badge: 'New'
+      id: 'pack-9',
+      name: '9-Pack Photo Collection',
+      description: 'Create a beautiful photo collection for your fridge or office.',
+      features: ['9 custom magnets', '£2.55 per magnet', 'Instagram-style layout', 'Family favorites'],
+      image: '/images/magnet3.jpeg',
+      price: '23.00',
+      originalPrice: '45.00',
+      link: '/custom?qty=9',
+      category: 'bundle',
+      badge: 'Popular Choice',
+      savings: '49%'
     },
     {
-      id: 4,
-      name: 'Mini Magnets Set (9 pcs)',
-      description: 'Small but mighty! Create a set of 9 mini magnets from your favorite memories.',
-      features: ['Compact size (3x3cm)', 'Great for small spaces', 'Instagram-style layout'],
-      image: 'https://images.unsplash.com/photo-1596079890744-c1a0462d0975?w=800&q=80',
-      price: '24.99',
-      link: '/custom',
-      category: 'bundles'
+      id: 'pack-12',
+      name: '12-Pack Mega Collection',
+      description: 'Our biggest value pack! Perfect for large families or multiple occasions.',
+      features: ['12 custom magnets', '£2.33 per magnet', 'Maximum savings', 'Wedding/event favors'],
+      image: '/images/magnet4.jpeg',
+      price: '28.00',
+      originalPrice: '60.00',
+      link: '/custom?qty=12',
+      category: 'bundle',
+      badge: 'Best Seller',
+      savings: '53%'
     },
+    {
+      id: 'business-pack',
+      name: 'Business Promotional Pack',
+      description: 'Perfect for businesses, real estate agents, and promotional giveaways.',
+      features: ['50+ magnets available', 'Logo and branding', 'Bulk pricing', 'Professional finish'],
+      image: '/images/magnet5.jpeg',
+      price: 'From £1.50',
+      link: '/contact',
+      category: 'business',
+      badge: 'Custom Quote'
+    },
+    {
+      id: 'wedding-favors',
+      name: 'Wedding Favor Collection',
+      description: 'Beautiful wedding photo magnets as memorable keepsakes for your guests.',
+      features: ['Custom wedding photos', 'Elegant packaging', 'Date and names included', 'Bulk discounts'],
+      image: '/images/magnet6.jpeg',
+      price: 'From £2.00',
+      link: '/contact',
+      category: 'special',
+      badge: 'Wedding Special'
+    }
   ]
 
-  // Grupează produsele pe categorii
+  // Categories for filtering
   const categories = {
-    all: 'All Products',
-    custom: 'Custom Magnets',
-    bundles: 'Value Packs',
-    shapes: 'Special Shapes'
+    all: { name: 'All Products', icon: '🔍' },
+    single: { name: 'Single Magnets', icon: '📸' },
+    bundle: { name: 'Value Packs', icon: '📦' },
+    business: { name: 'Business', icon: '💼' },
+    special: { name: 'Special Events', icon: '🎉' }
   }
 
-  // Testimoniale pentru social proof
+  // Filter products based on active category
+  const filteredProducts = activeCategory === 'all' 
+    ? products 
+    : products.filter(product => product.category === activeCategory)
+
+  // Customer testimonials
   const testimonials = [
     {
       id: 1,
-      name: 'Sarah M.',
-      text: 'The magnets arrived quickly and look amazing! The quality is much better than I expected.',
-      rating: 5
+      name: 'Sarah Johnson',
+      location: 'Manchester',
+      text: 'Amazing quality! The colors are so vibrant and the magnets are really strong. My family photos look beautiful on the fridge.',
+      rating: 5,
+      product: '6-Pack Photo Magnets',
+      image: '/images/magnet1.jpeg'
     },
     {
       id: 2,
-      name: 'David L.',
-      text: 'I ordered the family pack for Christmas gifts and everyone loved them. Will definitely order again!',
-      rating: 5
+      name: 'David Smith',
+      location: 'London',
+      text: 'Ordered these for our wedding favors and they were perfect! Our guests loved them and the quality exceeded expectations.',
+      rating: 5,
+      product: 'Wedding Favor Collection',
+      image: '/images/magnet2.jpeg'
     },
     {
       id: 3,
-      name: 'Emma R.',
-      text: 'The heart-shaped magnets were perfect for our wedding favors. Great quality and fast delivery.',
-      rating: 5
+      name: 'Emma Wilson',
+      location: 'Birmingham',
+      text: 'Fast delivery and excellent customer service. The business magnets with our logo look very professional.',
+      rating: 5,
+      product: 'Business Promotional Pack',
+      image: '/images/magnet3.jpeg'
     }
   ]
 
   return (
-    <div className="bg-white">
-      {/* Hero Banner */}
-      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 overflow-hidden">
+    <div className="bg-gray-50">
+      {/* Animated Hero Section */}
+      <div className="relative bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-700 overflow-hidden">
+        {/* Animated background elements */}
         <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-            backgroundSize: '30px 30px'
-          }}></div>
+          <div className="absolute top-10 left-10 w-20 h-20 bg-white rounded-full animate-pulse"></div>
+          <div className="absolute top-32 right-20 w-16 h-16 bg-white rounded-full animate-bounce"></div>
+          <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-white rounded-full animate-ping"></div>
+          <div className="absolute bottom-32 right-1/3 w-14 h-14 bg-white rounded-full animate-pulse"></div>
         </div>
-        <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6 lg:px-8 relative">
-          <div className="text-center">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-4">
-              Premium Quality Magnets
-            </h1>
-            <p className="text-lg text-indigo-100 max-w-2xl mx-auto">
-              Transform your photos into beautiful keepsakes that last a lifetime
-            </p>
-            <div className="mt-6 flex justify-center gap-4">
+        
+        <div className="max-w-7xl mx-auto py-20 px-4 sm:px-6 lg:px-8 relative">
+          <motion.div 
+            className="text-center"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <motion.h1 
+              className="text-4xl md:text-6xl font-extrabold text-white mb-6"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              Premium Photo Magnets
+            </motion.h1>
+            <motion.p 
+              className="text-xl text-pink-100 max-w-3xl mx-auto mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              Transform your favorite memories into beautiful, durable magnets that bring joy every day. 
+              Professional quality printing with fast UK delivery.
+            </motion.p>
+            
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+            >
               <Link
                 href="/custom"
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-indigo-700 bg-white hover:bg-indigo-50 transition-colors"
+                className="inline-flex items-center px-8 py-4 bg-white text-purple-600 font-bold rounded-full text-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                Create Custom Magnet
+                🎨 Create Your Magnet
+                <svg className="ml-2 w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
               </Link>
               <a
                 href="#products"
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-indigo-800 bg-opacity-40 hover:bg-opacity-50 transition-colors"
+                className="inline-flex items-center px-8 py-4 border-2 border-white text-white font-semibold rounded-full text-lg hover:bg-white hover:text-purple-600 transition-all duration-300"
               >
-                Browse Collection
+                📦 Browse Collection
               </a>
-            </div>
-          </div>
+            </motion.div>
+
+            {/* Trust indicators */}
+            <motion.div 
+              className="mt-12 flex flex-wrap justify-center items-center gap-8 text-pink-100"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+            >
+              <div className="flex items-center space-x-2">
+                <span className="text-2xl">⭐</span>
+                <span className="text-lg font-semibold">5.0 Rating</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-2xl">🚚</span>
+                <span className="text-lg font-semibold">Fast UK Delivery</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-2xl">💝</span>
+                <span className="text-lg font-semibold">Perfect Gifts</span>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6 lg:px-8" id="products">
-        {/* Category Navigation */}
-        <div className="flex flex-wrap justify-center gap-2 mb-8">
-          {Object.entries(categories).map(([key, label]) => (
+      <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8" id="products">
+        
+        {/* Category Filter */}
+        <motion.div 
+          className="flex flex-wrap justify-center gap-3 mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          {Object.entries(categories).map(([key, category]) => (
             <button
               key={key}
-              className="px-4 py-2 rounded-full text-sm font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+              onClick={() => setActiveCategory(key)}
+              className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                activeCategory === key
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow-md'
+              }`}
             >
-              {label}
+              <span className="mr-2">{category.icon}</span>
+              {category.name}
             </button>
           ))}
-        </div>
+        </motion.div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-8">
-          {products.map((product) => (
-            <div key={product.id} className="group relative bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="flex flex-col h-full">
-                {/* Badge */}
-                {product.badge && (
-                  <div className="absolute top-4 right-4 z-10">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                      {product.badge}
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          layout
+        >
+          {filteredProducts.map((product, index) => (
+            <motion.div
+              key={product.id}
+              className="group relative bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: index * 0.1 }}
+              layout
+            >
+              {/* Badge */}
+              {product.badge && (
+                <div className="absolute top-4 right-4 z-10">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-pink-500 to-purple-600 text-white">
+                    {product.badge}
+                  </span>
+                </div>
+              )}
+
+              {/* Savings Badge */}
+              {product.savings && (
+                <div className="absolute top-4 left-4 z-10">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-500 text-white">
+                    Save {product.savings}
+                  </span>
+                </div>
+              )}
+              
+              {/* Image */}
+              <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200">
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  fill
+                  className="object-cover group-hover:scale-110 transition-transform duration-500"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </div>
+              
+              {/* Content */}
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
+                    {product.name}
+                  </h3>
+                  <div className="flex flex-col items-end">
+                    {product.originalPrice && (
+                      <span className="text-sm text-gray-500 line-through">£{product.originalPrice}</span>
+                    )}
+                    <span className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
+                      £{product.price}
                     </span>
                   </div>
-                )}
-                
-                {/* Image */}
-                <div className="relative aspect-[4/3] bg-gray-100">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
                 </div>
                 
-                {/* Content */}
-                <div className="flex-1 p-6">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {product.name}
-                    </h3>
-                    <div className="flex items-baseline">
-                      {product.originalPrice && (
-                        <span className="text-sm text-gray-500 line-through mr-2">£{product.originalPrice}</span>
-                      )}
-                      <span className="text-lg font-bold text-indigo-600">£{product.price}</span>
-                    </div>
-                  </div>
-                  
-                  <p className="mt-2 text-sm text-gray-500">
-                    {product.description}
-                  </p>
-                  
-                  {/* Features */}
-                  <ul className="mt-4 space-y-1">
-                    {product.features.map((feature, index) => (
-                      <li key={index} className="flex items-center text-sm text-gray-600">
-                        <svg className="h-4 w-4 text-indigo-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <p className="text-gray-600 mb-4 leading-relaxed">
+                  {product.description}
+                </p>
                 
-                {/* CTA */}
-                <div className="p-6 pt-0 mt-auto">
-                  <Link
-                    href={product.link}
-                    className="block w-full text-center py-2.5 px-4 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium hover:from-indigo-700 hover:to-purple-700 transition-colors"
-                  >
-                    Customize Now
-                  </Link>
-                </div>
+                {/* Features */}
+                <ul className="space-y-2 mb-6">
+                  {product.features.map((feature, index) => (
+                    <li key={index} className="flex items-center text-sm text-gray-700">
+                      <div className="w-2 h-2 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full mr-3 flex-shrink-0"></div>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                
+                {/* CTA Button */}
+                <Link
+                  href={product.link}
+                  className="block w-full text-center py-4 px-6 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold hover:from-pink-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  {product.category === 'business' || product.category === 'special' ? 'Get Quote' : 'Create Now'}
+                  <span className="ml-2">→</span>
+                </Link>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Testimonials */}
-        <div className="mt-16 bg-indigo-50 rounded-2xl p-8">
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
-            What Our Customers Say
+        {/* Why Choose Us Section */}
+        <motion.div 
+          className="mt-24 bg-white rounded-3xl p-12 shadow-xl"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-4xl font-bold text-center text-gray-900 mb-12">
+            Why Choose Our Magnets?
           </h2>
-          <div className="grid gap-6 md:grid-cols-3">
-            {testimonials.map((testimonial) => (
-              <div key={testimonial.id} className="bg-white p-6 rounded-xl shadow-sm">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-2xl">
+                🎨
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Premium Quality</h3>
+              <p className="text-gray-600">Professional-grade printing with vibrant colors that last. Weather-resistant and durable materials.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-2xl">
+                ⚡
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Fast Production</h3>
+              <p className="text-gray-600">Your magnets are produced within 1-2 business days and shipped with tracking for peace of mind.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-2xl">
+                💝
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Perfect Gifts</h3>
+              <p className="text-gray-600">Personalized magnets make thoughtful gifts for any occasion. Loved by families worldwide.</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Customer Testimonials */}
+        <motion.div 
+          className="mt-24"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-4xl font-bold text-center text-gray-900 mb-12">
+            Happy Customers ❤️
+          </h2>
+          <div className="grid gap-8 md:grid-cols-3">
+            {testimonials.map((testimonial, index) => (
+              <motion.div 
+                key={testimonial.id} 
+                className="bg-white p-8 rounded-2xl shadow-lg"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+              >
                 {/* Stars */}
                 <div className="flex mb-4">
                   {[...Array(5)].map((_, i) => (
-                    <svg 
-                      key={i} 
-                      className={`h-5 w-5 ${i < testimonial.rating ? 'text-yellow-400' : 'text-gray-300'}`} 
-                      fill="currentColor" 
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
+                    <span key={i} className="text-yellow-400 text-xl">⭐</span>
                   ))}
                 </div>
-                <p className="text-gray-600 italic mb-4">"{testimonial.text}"</p>
-                <p className="text-sm font-medium text-gray-900">{testimonial.name}</p>
-              </div>
+                <p className="text-gray-700 italic mb-6 leading-relaxed">"{testimonial.text}"</p>
+                <div className="flex items-center">
+                  <div className="w-12 h-12 rounded-full overflow-hidden mr-4">
+                    <Image 
+                      src={testimonial.image} 
+                      alt={testimonial.name}
+                      width={48}
+                      height={48}
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900">{testimonial.name}</p>
+                    <p className="text-sm text-gray-500">{testimonial.location} • {testimonial.product}</p>
+                  </div>
+                </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        {/* FAQ Section */}
-        <div className="mt-16">
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
-            Frequently Asked Questions
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="bg-white p-6 rounded-xl border border-gray-100">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">How long do magnets take to arrive?</h3>
-              <p className="text-gray-600">Orders are typically processed within 1-2 business days. Delivery times vary by location, but most UK orders arrive within 3-5 business days.</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-100">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">What photo quality do I need?</h3>
-              <p className="text-gray-600">For best results, we recommend using high-resolution images (at least 1000x1000 pixels). Our system will let you know if your photo quality is too low.</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-100">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Can I order magnets in bulk?</h3>
-              <p className="text-gray-600">Yes! We offer special pricing for bulk orders. Please contact our customer service team for custom quotes on orders of 20+ magnets.</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-100">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">What if I'm not happy with my order?</h3>
-              <p className="text-gray-600">We offer a 100% satisfaction guarantee. If you're not completely satisfied, please contact us within 14 days of receiving your order for a replacement or refund.</p>
+        {/* Final CTA Section */}
+        <motion.div 
+          className="mt-24 bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-700 rounded-3xl p-12 text-center relative overflow-hidden"
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
+          {/* Background decoration */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-4 right-8 w-24 h-24 bg-white rounded-full animate-pulse"></div>
+            <div className="absolute bottom-8 left-12 w-16 h-16 bg-white rounded-full animate-bounce"></div>
+          </div>
+          
+          <div className="relative z-10">
+            <h2 className="text-4xl font-bold text-white mb-6">
+              Ready to Create Your Perfect Magnets? 🎯
+            </h2>
+            <p className="text-xl text-pink-100 mb-8 max-w-3xl mx-auto">
+              Join thousands of happy customers who've turned their favorite photos into beautiful keepsakes. 
+              Start creating your custom magnets today!
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/custom"
+                className="inline-flex items-center px-10 py-4 bg-white text-purple-600 font-bold rounded-full text-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg"
+              >
+                🚀 Start Creating Now
+                <svg className="ml-2 w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
+              <Link
+                href="/contact"
+                className="inline-flex items-center px-10 py-4 border-2 border-white text-white font-semibold rounded-full text-lg hover:bg-white hover:text-purple-600 transition-all duration-300"
+              >
+                💬 Need Help?
+              </Link>
             </div>
           </div>
-        </div>
-
-        {/* CTA Banner */}
-        <div className="mt-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-center">
-          <h2 className="text-2xl font-bold text-white mb-4">
-            Ready to Create Your Custom Magnets?
-          </h2>
-          <p className="text-indigo-100 mb-6 max-w-2xl mx-auto">
-            Turn your favorite photos into beautiful keepsakes in just a few clicks.
-          </p>
-          <Link
-            href="/custom"
-            className="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-indigo-700 bg-white hover:bg-indigo-50 transition-colors"
-          >
-            Start Creating Now
-            <svg className="ml-2 -mr-1 w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </Link>
-        </div>
+        </motion.div>
       </div>
     </div>
   )

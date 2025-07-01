@@ -8,34 +8,35 @@ import { ToastProvider } from '@/contexts/ToastContext'
 import { useEffect } from 'react'
 
 export default function Providers({ children }) {
-  // Funcție pentru a curăța localStorage în caz de eroare
+  // Handle storage errors gracefully
   useEffect(() => {
     const handleStorageError = () => {
       try {
-        // Verificăm dacă localStorage este plin
+        // Check if localStorage is available and has space
         const testKey = 'storage-test'
         localStorage.setItem(testKey, '1')
         localStorage.removeItem(testKey)
       } catch (e) {
-        console.warn('Storage quota exceeded, clearing persist:root')
-        // Încercăm să ștergem doar cheia pentru Redux Persist
+        // Clear Redux Persist data to free up space
         try {
           localStorage.removeItem('persist:root')
         } catch (clearError) {
-          console.error('Failed to clear storage:', clearError)
+          // Storage is completely full or unavailable
         }
       }
     }
 
-    // Adăugăm listener pentru erori de storage
-    window.addEventListener('error', (e) => {
+    // Listen for storage errors
+    const handleError = (e) => {
       if (e.message && e.message.includes('QuotaExceededError')) {
         handleStorageError()
       }
-    })
+    }
+
+    window.addEventListener('error', handleError)
 
     return () => {
-      window.removeEventListener('error', handleStorageError)
+      window.removeEventListener('error', handleError)
     }
   }, [])
 

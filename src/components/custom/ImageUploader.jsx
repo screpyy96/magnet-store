@@ -2,22 +2,52 @@ import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function ImageUploader({ onFileChange }) {
-  const onDrop = useCallback((acceptedFiles) => {
-    onFileChange({ target: { files: acceptedFiles } });
-  }, [onFileChange]);
+export default function ImageUploader({ onFileChange, maxFiles = 10 }) {
+  const onDrop = useCallback((acceptedFiles, fileRejections) => {
+    if (fileRejections.length > 0) {
+      const error = fileRejections[0].errors[0];
+      if (error.code === 'too-many-files') {
+        alert(`You can only upload up to ${maxFiles} files`);
+        return;
+      }
+      alert(error.message);
+      return;
+    }
+    
+    // If maxFiles is set, only take the first N files
+    const filesToProcess = maxFiles 
+      ? acceptedFiles.slice(0, maxFiles) 
+      : acceptedFiles;
+      
+    onFileChange({ target: { files: filesToProcess } });
+  }, [onFileChange, maxFiles]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.gif']
     },
-    multiple: true
+    multiple: true,
+    maxFiles: maxFiles || null, // null means unlimited
+    maxSize: 10 * 1024 * 1024, // 10MB
+    onDropRejected: (fileRejections) => {
+      const error = fileRejections[0].errors[0];
+      if (error.code === 'file-too-large') {
+        alert('File is too large. Maximum size is 10MB');
+      } else if (error.code === 'file-invalid-type') {
+        alert('Invalid file type. Please upload an image (JPEG, JPG, PNG, GIF)');
+      }
+    }
   });
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-2 md:p-4">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Upload Your Images</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Images</h2>
+      {maxFiles && (
+        <p className="text-sm text-gray-500 mb-4">
+          Maximum {maxFiles} {maxFiles === 1 ? 'file' : 'files'}
+        </p>
+      )}
       
       <div
         {...getRootProps()}
@@ -58,8 +88,11 @@ export default function ImageUploader({ onFileChange }) {
                 ? 'Drop your images here...' 
                 : 'Drag & drop your images here, or click to select'}
             </motion.p>
-            <p className="mt-2 text-sm text-gray-500">
-              PNG, JPG, GIF up to 10MB each
+            <p className="mt-2 text-sm text-gray-600">
+              {isDragActive
+                ? 'Drop the files here...'
+                : `Drag and drop your images here, or click to select files${maxFiles ? ` (max ${maxFiles})` : ''}`
+              }
             </p>
           </div>
         </div>

@@ -10,56 +10,189 @@ import ImageUploader from '@/components/custom/ImageUploader'
 import OrderItem from '@/components/custom/OrderItem'
 import OrderSummary from '@/components/custom/OrderSummary'
 import ImageEditor from '@/components/custom/ImageEditor'
+import MagnetPreview from '@/components/custom/MagnetPreview'
+import ProductOptions from '@/components/custom/ProductOptions'
+import ProductDetails from '@/components/custom/ProductDetails'
+import DeliveryInfo from '@/components/custom/DeliveryInfo'
 import { useToast } from '@/contexts/ToastContext'
-import { uploadImage } from '@/utils/imageUpload'
 import { v4 as uuidv4 } from 'uuid'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { safeLocalStorage } from '@/utils/localStorage'
+// Storage functions will be used during checkout, not here
 
-const MAGNET_PRICE = 9.99
+// Package configurations for bulk orders
+const PACKAGES = [
+  {
+    id: '1',
+    name: '1 Custom Magnet',
+    price: 5,
+    pricePerUnit: 5,
+    description: 'Single magnet for testing or small gifts',
+    tag: 'SINGLE',
+    maxFiles: 1
+  },
+  {
+    id: '6',
+    name: '6 Custom Magnets',
+    price: 17.00,
+    pricePerUnit: 2.83,
+    description: 'Perfect for small gifts or personal use',
+    tag: 'BEST VALUE',
+    maxFiles: 6
+  },
+  {
+    id: '9',
+    name: '9 Custom Magnets',
+    price: 23.00,
+    pricePerUnit: 2.55,
+    description: 'Great for families and small collections',
+    tag: 'POPULAR',
+    maxFiles: 9
+  },
+  {
+    id: '12',
+    name: '12 Custom Magnets',
+    price: 28.00,
+    pricePerUnit: 2.33,
+    description: 'Ideal for large families or multiple designs',
+    tag: 'BEST SELLER',
+    maxFiles: 12
+  }
+];
+
+// Get package from URL or default to 1 magnet
+const getInitialPackage = () => {
+  if (typeof window === 'undefined') return PACKAGES[0];
+  const params = new URLSearchParams(window.location.search);
+  const pkgId = params.get('qty') || params.get('package') || '1';
+  return PACKAGES.find(pkg => pkg.id === pkgId) || PACKAGES[0];
+};
 
 export default function Custom() {
   const router = useRouter()
   const { user, isLoading: authLoading } = useAuth()
-  const [currentEditingFile, setCurrentEditingFile] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const { showToast } = useToast()
+  const [currentEditingFile, setCurrentEditingFile] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [selectedSize, setSelectedSize] = useState('5x5');
+  const [selectedFinish, setSelectedFinish] = useState('flexible');
+  const [isClient, setIsClient] = useState(false);
+  const [currentImage, setCurrentImage] = useState(null);
+  const { showToast } = useToast();
   
-  const dispatch = useDispatch()
-  const orderItems = useSelector(selectCartItems) || []
-  const totalPrice = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  const dispatch = useDispatch();
+  const orderItems = useSelector(selectCartItems) || [];
+  const totalPrice = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // More efficient auth check to prevent unnecessary loading screens
+  // Set isClient to true when component mounts (client-side only)
   useEffect(() => {
-    // Only redirect if we're certain user isn't authenticated and we're done loading
-    if (!authLoading && user === null) {
-      // We know for sure user is not authenticated
-      router.push('/login?redirect=/custom')
+    setIsClient(true);
+  }, []);
+
+  // Initialize selected package from URL or default
+  useEffect(() => {
+    const pkg = getInitialPackage();
+    setSelectedPackage(pkg);
+  }, []);
+
+  // Handle client-side operations after mount
+  useEffect(() => {
+    if (!isClient) return;
+
+    // Restore currentImage from the most recent cart item (after refresh)
+    if (orderItems.length > 0 && !currentImage) {
+      // Find the most recent custom magnet item
+      const customMagnets = orderItems.filter(item => 
+        item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet'
+      );
+      
+      if (customMagnets.length > 0) {
+        // Get the most recent one (assuming IDs contain timestamps)
+        const mostRecent = customMagnets.reduce((latest, current) => {
+          const latestTime = parseInt(latest.id.split('-')[1] || '0');
+          const currentTime = parseInt(current.id.split('-')[1] || '0');
+          return currentTime > latestTime ? current : latest;
+        });
+        
+        if (mostRecent.image) {
+          console.log('🔄 Restoring currentImage from most recent cart item');
+          setCurrentImage(mostRecent.image);
+        }
+      }
     }
-  }, [user, authLoading, router])
+
+    // Check for existing order data in localStorage
+    const orderData = safeLocalStorage.getJSON('customMagnetOrder');
+    if (orderData) {
+      const pkg = getInitialPackage();
+      
+      // If the package matches, add the images to the cart
+      if (orderData.packageSize === parseInt(pkg.id)) {
+        orderData.images.forEach((imageUrl, index) => {
+          const newItem = {
+            id: `custom-${Date.now()}-${index}`,
+            name: `Custom Magnet ${index + 1} (${pkg.name})`,
+            price: pkg.price,
+            quantity: 1,
+            image_url: imageUrl,
+            image: imageUrl,
+            fileData: imageUrl,
+            custom_data: JSON.stringify({
+              type: 'custom_magnet',
+              packageId: pkg.id,
+              packageName: pkg.name,
+              size: selectedSize,
+              finish: selectedFinish
+            }),
+            size: pkg.id
+          };
+          dispatch(addItem(newItem));
+        });
+        safeLocalStorage.removeItem('customMagnetOrder');
+      }
+    }
+    
+    // If we're on /custom-order, redirect to /custom with the same parameters
+    if (window.location.pathname === '/custom-order') {
+      const params = new URLSearchParams(window.location.search);
+      router.replace(`/custom?${params.toString()}`);
+    }
+  }, [isClient, router, dispatch, selectedSize, selectedFinish, orderItems, currentImage]);
+
+  // Update URL when package changes
+  useEffect(() => {
+    if (selectedPackage && typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('qty', selectedPackage.id);
+      window.history.pushState({}, '', url);
+    }
+  }, [selectedPackage]);
+
+  // No longer redirecting non-logged-in users
 
   const handleFileChange = (e) => {
     try {
-      setError(null)
-      const files = Array.from(e.target.files)
+      setError(null);
+      const files = Array.from(e.target.files);
       
       if (files.length === 0) {
-        throw new Error('Please select an image to upload')
+        throw new Error('Please select an image to upload');
       }
 
-      const file = files[0]
+      const file = files[0];
       
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        throw new Error('Please upload only image files')
+        throw new Error('Please upload only image files');
       }
 
       // Validate file size (max 20MB)
       if (file.size > 20 * 1024 * 1024) {
-        throw new Error('Image size should be less than 20MB')
+        throw new Error('Image size should be less than 20MB');
       }
 
-      setCurrentEditingFile(file)
+      setCurrentEditingFile(file);
     } catch (err) {
       setError(err.message)
       showToast(err.message, 'error')
@@ -68,88 +201,113 @@ export default function Custom() {
 
   const handleCroppedImage = async (blob) => {
     try {
-      console.log('Starting image upload, blob size:', blob.size);
       setIsLoading(true);
       
-      // Verifică dacă blob-ul este valid
+      // Verify that the blob is valid
       if (!blob || blob.size === 0) {
         throw new Error('Invalid image data');
       }
       
-      // Limitează dimensiunea imaginii (optional)
-      if (blob.size > 5 * 1024 * 1024) { // 5MB
-        throw new Error('Image is too large (max 5MB)');
-      }
+      // Create both full quality and thumbnail versions
+      const [fullQualityBase64, thumbnailBase64] = await Promise.all([
+        blobToBase64(blob, 0.95), // Full quality for upload
+        createThumbnail(blob, 200, 0.7) // Small thumbnail for preview/localStorage
+      ]);
       
-      // Generează un nume de fișier unic
-      const fileName = `custom_${Date.now()}_${Math.random().toString(36).substring(2, 15)}.png`;
-      const filePath = `custom_magnets/${fileName}`;
+      // Set current image for preview using thumbnail
+      setCurrentImage(thumbnailBase64);
       
-      // Obține un client Supabase
-      const supabase = createClientComponentClient();
-      
-      // Verifică autentificarea (doar dacă este necesară)
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('User authenticated:', !!session);
-      
-      // Upload cu logging detaliat
-      console.log('Uploading to path:', filePath);
-      const { data, error } = await supabase.storage
-        .from('magnet_images') // Asigură-te că acest bucket există
-        .upload(filePath, blob, {
-          contentType: 'image/png',
-          cacheControl: '3600',
-          upsert: false
-        });
-      
-      if (error) {
-        console.error('Supabase storage error:', error);
-        throw error;
-      }
-      
-      console.log('Upload successful:', data);
-      
-      // Construiește URL-ul public pentru imagine
-      const imageUrl = supabase.storage
-        .from('magnet_images') // Folosește bucket-ul corect, același ca la upload
-        .getPublicUrl(filePath).data.publicUrl;
-      
-      console.log('Image public URL:', imageUrl);
-      
-      // ADAUGĂ PRODUSUL LA COȘ - AICI ESTE SCHIMBAREA PRINCIPALĂ
-      const newItem = {
-        id: uuidv4(),
-        name: 'Custom Magnet',
-        price: MAGNET_PRICE,
-        quantity: 1,
-        // Use image_url as the primary field to match order_items table structure
-        image_url: imageUrl,
-        // Keep these for backward compatibility
-        image: imageUrl,
-        fileData: imageUrl,
-        // Store custom data properly
-        custom_data: JSON.stringify({
-          type: 'custom_magnet',
-          originalFileName: currentEditingFile.name
-        }),
-        size: 'standard'
+      // Save to localStorage for later upload during checkout
+      const imageData = {
+        fullBlob: fullQualityBase64, // Full quality for upload
+        thumbnail: thumbnailBase64, // Small for preview
+        timestamp: Date.now(),
+        size: selectedSize,
+        finish: selectedFinish
       };
       
-      // Adaugă la coș
-      dispatch(addItem(newItem));
-      showToast('Magnet personalizat adăugat în coș!', 'success');
+      // Get existing images from localStorage
+      const existingImages = safeLocalStorage.getJSON('customMagnetImages') || [];
+      existingImages.push(imageData);
+      safeLocalStorage.setJSON('customMagnetImages', existingImages);
       
-      // Continuă cu procesarea imaginii încărcate
+      // Add single magnet to cart with thumbnail
+      const magnetItem = {
+        id: `magnet-${Date.now()}`,
+        name: `Custom Photo Magnet (${selectedSize}cm)`,
+        price: selectedPackage.price,
+        quantity: 1,
+        image_url: thumbnailBase64,
+        image: thumbnailBase64,
+        fileData: thumbnailBase64,
+        localImageData: imageData, // Store both versions
+        custom_data: JSON.stringify({
+          type: 'custom_magnet',
+          size: selectedSize,
+          finish: selectedFinish,
+          packageId: selectedPackage.id,
+          packageName: selectedPackage.name
+        })
+      };
+      
+      dispatch(addItem(magnetItem));
+      showToast('Magnet added to cart!', 'success');
+      
+      // Continue with the uploaded image processing
       setCurrentEditingFile(null);
       
-      return imageUrl;
+      return thumbnailBase64;
     } catch (error) {
-      console.error('Detailed upload error:', error);
-      showToast('Eroare la încărcarea imaginii: ' + (error.message || 'Unknown error'), 'error');
-      throw new Error('Failed to upload image: ' + (error.message || 'Unknown error'));
+      showToast('Error processing image: ' + (error.message || 'Unknown error'), 'error');
+      throw new Error('Failed to process image: ' + (error.message || 'Unknown error'));
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Helper function to convert blob to base64 with quality control
+  const blobToBase64 = (blob, quality = 0.8) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Helper function to create thumbnail
+  const createThumbnail = (blob, maxSize = 200, quality = 0.7) => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate thumbnail size maintaining aspect ratio
+        const size = Math.min(maxSize, img.width, img.height);
+        canvas.width = size;
+        canvas.height = size;
+        
+        // Calculate crop area for square thumbnail
+        const sourceSize = Math.min(img.width, img.height);
+        const sourceX = (img.width - sourceSize) / 2;
+        const sourceY = (img.height - sourceSize) / 2;
+        
+        // Draw cropped and resized image
+        ctx.drawImage(
+          img,
+          sourceX, sourceY, sourceSize, sourceSize,
+          0, 0, size, size
+        );
+        
+        // Convert to base64 with compression
+        const thumbnailBase64 = canvas.toDataURL('image/jpeg', quality);
+        resolve(thumbnailBase64);
+      };
+      
+      img.onerror = reject;
+      img.src = URL.createObjectURL(blob);
+    });
   };
 
   const handleQuantityChange = (index, value) => {
@@ -181,193 +339,171 @@ export default function Custom() {
     }
   }
 
-  // Simplified loading state logic - only show loading when really needed
-  if (authLoading) {
-    // Check for session with a safe client-side only check
-    const quickLoadCheck = typeof window !== 'undefined' && 
-      window.localStorage && 
-      window.localStorage.getItem('supabase_session') !== null;
-    
-    if (!quickLoadCheck) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
-          </div>
-        </div>
-      )
-    }
-    // Otherwise render the page content immediately while auth state loads in background
-  }
-
-  // Only show this if we know for sure user is not logged in
-  if (user === null && !authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking authentication...</p>
-        </div>
-      </div>
-    )
-  }
+  // No auth required for custom page - guests can design magnets
 
   return (
-    <div className="bg-white">
-      {/* Hero Section - Compact & Cohesive */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-pink-50 to-blue-50 border-b border-pink-100">
-        {/* Subtle pattern background */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0" style={{ 
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23D8B4FE' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-            backgroundSize: '30px 30px'
-          }}></div>
+    <div className="bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center space-x-4 text-sm text-gray-500">
+            <span>Magnets</span>
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 111.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+            <span>Photo Magnet</span>
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 111.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+            <span className="text-gray-900 font-medium">Design Your Own</span>
+          </div>
         </div>
-        
-        {/* Subtle decorative elements */}
-        <div className="absolute top-0 right-1/4 -mt-10 w-40 h-40 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
-        <div className="absolute bottom-0 left-1/4 -mb-10 w-40 h-40 bg-amber-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
-        <div className="absolute top-1/2 right-1/3 -mt-10 w-40 h-40 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-12">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            {/* Text Content */}
-            <div className="text-center md:text-left">
-              <div className="inline-block mb-3">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-pink-100 to-pink-200 text-pink-800 border border-pink-200 shadow-sm">
-                  <span className="mr-1">✨</span> Custom Design
-                </span>
-              </div>
-              
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 leading-tight">
-                Create Your Own <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-amber-400">Sweet Magnets</span>
-              </h1>
-              
-              <p className="text-base md:text-lg text-gray-600 mb-6 max-w-lg">
-                Transform your favorite photos into beautiful fridge magnets. Perfect for preserving memories or giving as thoughtful gifts.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 md:justify-start justify-center">
-                <button
-                  onClick={() => document.querySelector('input[type="file"]')?.click()}
-                  className="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-full shadow-md bg-gradient-to-r from-pink-400 to-amber-400 text-white hover:from-pink-500 hover:to-amber-500 transition duration-200 transform hover:-translate-y-1 hover:shadow-lg"
-                >
-                  <svg className="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
-                  </svg>
-                  Upload Your Photo
-                </button>
-                
-                
-              </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left Column - Design Area */}
+          <div className="space-y-6">
+            {/* Preview */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Design Preview</h2>
+              <MagnetPreview 
+                imageUrl={currentImage} 
+                size={`${selectedSize}cm`}
+                finish={selectedFinish}
+              />
             </div>
-            
-            {/* Visual Element */}
-            <div className="hidden md:block relative">
-              <div className="relative z-10 bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 p-2">
-                <div className="aspect-[4/3] relative rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-pink-50">
-                  {/* Fridge background with magnets */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                    <div className="w-full h-full relative">
-                      {/* Fridge handle */}
-                      <div className="absolute right-6 top-1/2 transform -translate-y-1/2 w-3 h-32 bg-gray-300 rounded-r"></div>
-                      
-                      {/* Magnets */}
-                      <div className="absolute top-[15%] left-[20%] w-24 h-24 rounded-lg shadow-lg transform rotate-6 bg-white p-1">
-                        <div className="w-full h-full bg-gradient-to-br from-pink-100 to-pink-200 rounded overflow-hidden flex items-center justify-center">
-                          <div className="text-pink-600 font-bold">Family</div>
-                        </div>
-                      </div>
-                      
-                      <div className="absolute top-[25%] right-[25%] w-28 h-28 rounded-lg shadow-lg transform -rotate-3 bg-white p-1">
-                        <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 rounded overflow-hidden flex items-center justify-center">
-                          <div className="text-blue-600 font-bold">Vacation</div>
-                        </div>
-                      </div>
-                      
-                      <div className="absolute bottom-[20%] left-[30%] w-32 h-32 rounded-lg shadow-lg transform rotate-12 bg-white p-1">
-                        <div className="w-full h-full bg-gradient-to-br from-amber-100 to-amber-200 rounded overflow-hidden flex items-center justify-center">
-                          <div className="text-amber-600 font-bold">Love</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+
+            {/* Upload Area */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Upload Your Photo</h3>
+              <ImageUploader 
+                onFileChange={handleFileChange} 
+                maxFiles={1}
+              />
+              {error && (
+                <div className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+            </div>
+
+            {/* Product Options */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Customize Your Magnet</h3>
+              <ProductOptions
+                selectedSize={selectedSize}
+                selectedFinish={selectedFinish}
+                onSizeChange={setSelectedSize}
+                onFinishChange={setSelectedFinish}
+              />
+            </div>
+          </div>
+
+          {/* Right Column - Product Info & Cart */}
+          <div className="space-y-6">
+            {/* Product Header */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Custom Photo Magnet</h1>
+              <div className="flex items-center space-x-4 mb-4">
+                <span className="text-3xl font-bold text-gray-900">£{selectedPackage?.price.toFixed(2)}</span>
+                {selectedPackage?.id !== '1' && (
+                  <span className="text-sm text-gray-500">
+                    £{selectedPackage?.pricePerUnit.toFixed(2)} each
+                  </span>
+                )}
+              </div>
+              
+              {/* Package Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-900 mb-3">
+                  QUANTITY
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {PACKAGES.map((pkg) => (
+                    <button
+                      key={pkg.id}
+                      onClick={() => setSelectedPackage(pkg)}
+                      className={`p-3 border rounded-lg text-center transition-colors relative ${
+                        selectedPackage?.id === pkg.id
+                          ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
+                          : 'border-gray-200 hover:border-indigo-300'
+                      }`}
+                    >
+                      {pkg.tag && (
+                        <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                          {pkg.tag}
+                        </span>
+                      )}
+                      <div className="font-medium text-gray-900">{pkg.name}</div>
+                      <div className="text-lg font-bold text-indigo-600">£{pkg.price.toFixed(2)}</div>
+                      <div className="text-xs text-gray-500">{pkg.description}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
-              
-              {/* Decorative elements */}
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-amber-200 rounded-full opacity-30 blur-xl"></div>
-              <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-36 h-36 bg-pink-200 rounded-full opacity-30 blur-xl"></div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Main Content - More Compact Layout */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-        {/* Upload Area */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-          <div className="p-6">
-        
-            <ImageUploader onFileChange={handleFileChange} />
-            {error && (
-              <div className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl">
-                {error}
+              {/* Add to Cart Button */}
+              <button
+                onClick={() => document.querySelector('input[type="file"]')?.click()}
+                disabled={isLoading}
+                className="w-full bg-indigo-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Processing...' : 'CREATE NOW'}
+              </button>
+            </div>
+
+            {/* Delivery Info */}
+            <DeliveryInfo />
+
+            {/* Current Cart */}
+            {orderItems.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Your Cart</h3>
+                  <button 
+                    onClick={() => dispatch(clearCart())} 
+                    className="text-sm text-red-500 hover:text-red-700"
+                  >
+                    Clear All
+                  </button>
+                </div>
+                
+                <AnimatePresence>
+                  {orderItems.map((item, index) => (
+                    <OrderItem
+                      key={index}
+                      item={item}
+                      index={index}
+                      onQuantityChange={handleQuantityChange}
+                      onRemove={handleRemoveItem}
+                    />
+                  ))}
+                </AnimatePresence>
+
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-lg font-semibold text-gray-900">Total</span>
+                    <span className="text-2xl font-bold text-gray-900">£{totalPrice.toFixed(2)}</span>
+                  </div>
+                  <button
+                    onClick={() => router.push('/checkout')}
+                    className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                  >
+                    Proceed to Checkout
+                  </button>
+                </div>
               </div>
             )}
-          </div>
-        </div>
-        
-        {/* Order Items */}
-        {orderItems.length > 0 ? (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Your Order</h2>
-                <button 
-                  onClick={() => dispatch(clearCart())} 
-                  className="text-sm text-red-500 hover:text-red-700"
-                >
-                  Clear All
-                </button>
-              </div>
-              
-              <AnimatePresence>
-                {orderItems.map((item, index) => (
-                  <OrderItem
-                    key={index}
-                    item={item}
-                    index={index}
-                    onQuantityChange={handleQuantityChange}
-                    onRemove={handleRemoveItem}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-            <div className="p-6 text-center">
-              <p className="text-gray-500 mb-4">No products added yet. Upload an image to create a custom magnet.</p>
-            </div>
-          </div>
-        )}
 
-        {/* Order Summary - Mereu vizibil */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-          <div className="p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
-            <OrderSummary
-              totalPrice={totalPrice}
-              onSubmit={() => router.push('/checkout')}
-              isLoading={isLoading}
-              disabled={orderItems.length === 0}
-            />
+            {/* Product Details */}
+            <ProductDetails />
           </div>
         </div>
       </div>
 
+      {/* Image Editor Modal */}
       {currentEditingFile && (
         <ImageEditor
           file={currentEditingFile}

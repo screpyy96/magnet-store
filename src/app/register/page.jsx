@@ -56,8 +56,6 @@ function RegisterForm() {
     }
 
     try {
-      console.log('Attempting to sign up with:', { email: formData.email })
-      
       // Simplify the signup data
       const { data, error } = await signUp({
         email: formData.email,
@@ -65,17 +63,13 @@ function RegisterForm() {
       });
 
       if (error) {
-        console.error('Registration error details:', error)
         throw error
       }
-
-      console.log('Registration successful:', data);
 
       // Show success message and redirect
       alert('Check your email for the confirmation link!')
       router.push('/login?message=' + encodeURIComponent('Registration successful! Please check your email for the confirmation link.'))
     } catch (error) {
-      console.error('Registration error:', error)
       setError(error.message || 'Failed to register. Please try again.')
     } finally {
       setIsLoading(false)
@@ -87,20 +81,14 @@ function RegisterForm() {
       setIsLoading(true)
       setError(null)
       
-      console.log('Attempting to sign up with Google');
-      
       const { data, error } = await signInWithGoogle();
       
-      console.log('Google sign up result:', { data, error });
-      
       if (error) {
-        console.error('Google sign up error:', error)
         throw error
       }
       
       // No need to redirect here as the OAuth flow will handle it
     } catch (error) {
-      console.error('Google sign up failed:', error)
       setError(error.message || 'Failed to sign up with Google. Please try again.')
     } finally {
       setIsLoading(false)

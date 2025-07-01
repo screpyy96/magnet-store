@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
+import { safeLocalStorage } from '@/utils/localStorage'
 
 // Crearea contextului
 export const AuthContext = createContext({
@@ -31,24 +32,17 @@ export function AuthProvider({ children }) {
     const fetchUser = async () => {
       try {
         // Try to get session from storage first for faster restoration
-        const storedSession = typeof window !== 'undefined' ? 
-          localStorage.getItem('supabase_session') : null;
+        const storedSession = safeLocalStorage.getJSON('supabase_session');
           
         if (storedSession) {
-          try {
-            const parsedSession = JSON.parse(storedSession);
-            const now = new Date().getTime();
-            
-            // If stored session isn't expired, use it immediately (fast path)
-            if (parsedSession && parsedSession.expires_at && parsedSession.expires_at > now) {
-              setUser(parsedSession.user || null);
-              if (parsedSession.user) {
-                checkAdminStatus(parsedSession.user.id);
-              }
+          const now = new Date().getTime();
+          
+          // If stored session isn't expired, use it immediately (fast path)
+          if (storedSession && storedSession.expires_at && storedSession.expires_at > now) {
+            setUser(storedSession.user || null);
+            if (storedSession.user) {
+              checkAdminStatus(storedSession.user.id);
             }
-          } catch (e) {
-            console.error('Error parsing stored session:', e);
-            // Continue with regular session fetch if stored session parsing failed
           }
         }
         
@@ -56,7 +50,6 @@ export function AuthProvider({ children }) {
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error fetching session:', error);
           setUser(null);
           setLoading(false);
           return;
@@ -64,9 +57,7 @@ export function AuthProvider({ children }) {
         
         // Store the session for faster client-side access
         if (data?.session) {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('supabase_session', JSON.stringify(data.session));
-          }
+          safeLocalStorage.setJSON('supabase_session', data.session);
           setUser(data.session.user || null);
           if (data.session.user) {
             checkAdminStatus(data.session.user.id);
@@ -75,7 +66,6 @@ export function AuthProvider({ children }) {
           setUser(null);
         }
       } catch (error) {
-        console.error('Session fetch error:', error);
         setUser(null);
       } finally {
         setLoading(false);
@@ -108,37 +98,38 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Funcție pentru verificarea statusului de admin
+  // Funcție pentru verificarea statusului de admin folosind RPC
   const checkAdminStatus = async (userId) => {
-    try {
-      // Verificăm mai întâi localStorage pentru a evita cereri în exces
-      const cachedAdminStatus = localStorage.getItem(`admin_status_${userId}`)
-      
-      if (cachedAdminStatus) {
-        setIsAdmin(cachedAdminStatus === 'true')
-      }
-      
-      // Facem cererea către server pentru a actualiza statusul
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', userId)
-        .maybeSingle()
-        
-      if (error) {
-        console.error('Error checking admin status:', error)
-        return
-      }
-      
-      const adminStatus = !!data?.is_admin
-      setIsAdmin(adminStatus)
-      
-      // Salvăm în localStorage pentru referințe viitoare
-      localStorage.setItem(`admin_status_${userId}`, adminStatus.toString())
-    } catch (error) {
-      console.error('Error in admin check:', error)
+    if (!userId) {
+      return;
     }
-  }
+
+    // Check cache first
+    const cachedAdminStatus = safeLocalStorage.getItem(`admin_status_${userId}`);
+    if (cachedAdminStatus !== null) {
+      setIsAdmin(cachedAdminStatus === 'true');
+      return;
+    }
+
+    try {
+      const { data: adminStatus, error } = await supabase.rpc('get_user_admin_status', {
+        user_id: userId
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Cache and set the admin status
+      safeLocalStorage.setItem(`admin_status_${userId}`, adminStatus.toString());
+      setIsAdmin(adminStatus);
+    } catch (error) {
+      // Only update state if we don't have a cached value
+      if (cachedAdminStatus === null) {
+        setIsAdmin(false);
+      }
+    }
+  };
 
   // Store the intended URL before redirect
   const setRedirectAfterLogin = (url) => {
@@ -159,40 +150,26 @@ export function AuthProvider({ children }) {
   
   const signIn = async (credentials, redirectUrl = '/') => {
     try {
-      setLoading(true)
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: credentials.email,
-        password: credentials.password,
-        options: {
-          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined
-        }
-      })
+      const { data, error } = await supabase.auth.signInWithPassword(credentials)
       
-      if (error) throw error
-      
-      // Explicitly set the cookie for better cross-site handling
-      if (typeof window !== 'undefined' && data?.session) {
-        // Session will be automatically persisted in cookies by Supabase
-        console.log('Authentication successful, session established');
+      if (error) {
+        throw error
       }
       
-      // Obține parametrul redirect din URL sau folosește valoarea default
-      const urlParams = new URLSearchParams(window.location.search)
-      const redirect = urlParams.get('redirect') || redirectUrl
+      if (data?.session) {
+        safeLocalStorage.setJSON('supabase_session', data.session)
+        setUser(data.session.user)
+        
+        if (data.session.user) {
+          checkAdminStatus(data.session.user.id)
+        }
+        
+        return { success: true, user: data.session.user }
+      }
       
-      // Asigură-te că state-ul e actualizat înainte de redirecționare
-      setUser(data.user)
-      
-      // Navighează după autentificare
-      router.push(redirect)
-      
-      await createProfileIfNotExists(data.user)
-      
-      return { success: true }
+      throw new Error('No session created')
     } catch (error) {
       return { success: false, error: error.message }
-    } finally {
-      setLoading(false)
     }
   }
   
@@ -209,48 +186,40 @@ export function AuthProvider({ children }) {
     }
   }
   
-  const signInWithGoogle = async (redirectUrl = null) => {
+  const signInWithGoogle = async (redirectUrl = '/') => {
     try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      
-      // Build redirect path based on whether we have a custom redirect
-      let redirectPath = '/auth/callback';
-      if (redirectUrl) {
-        redirectPath += `?redirect=${encodeURIComponent(redirectUrl)}`;
-      }
-      
-      const fullRedirectUrl = `${origin}${redirectPath}`;
-      console.log('Google sign-in redirect:', fullRedirectUrl);
+      const fullRedirectUrl = `${window.location.origin}/auth/callback?redirect_to=${encodeURIComponent(redirectUrl)}`
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: fullRedirectUrl
         }
-      });
+      })
       
-      if (error) throw error;
-      return { success: true };
+      if (error) {
+        throw error
+      }
+      
+      return { success: true, data }
     } catch (error) {
-      console.error('Google sign in error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message }
     }
   }
   
   const createProfileIfNotExists = async (user) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .single();
-      
-    if (error && error.code === 'PGRST116') {
-      // Utilizatorul nu există în profiles, îl creăm
-      await supabase.from('profiles').insert({
-        id: user.id,
-        email: user.email,
-        full_name: user.user_metadata?.full_name || '',
+    try {
+      const { data, error } = await supabase.rpc('create_user_profile', {
+        user_id: user.id,
+        user_email: user.email,
+        full_name: user.user_metadata?.full_name || ''
       });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      throw error;
     }
   };
   

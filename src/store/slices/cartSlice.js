@@ -12,26 +12,77 @@ const cartSlice = createSlice({
   reducers: {
     addItem(state, action) {
       const newItem = action.payload;
-      const existingItem = state.items.find(item => item.id === newItem.id);
       
-      if (existingItem) {
-        existingItem.quantity++;
-        existingItem.totalPrice = existingItem.price * existingItem.quantity;
+      // For package items, we need to handle them specially
+      const isPackageItem = newItem.custom_data && JSON.parse(newItem.custom_data).isPartOfPackage;
+      
+      if (isPackageItem) {
+        const customData = JSON.parse(newItem.custom_data);
+        const packageId = `package-${customData.packageId}`;
+        
+        // Try to find existing package
+        const existingPackage = state.items.find(item => 
+          item.custom_data && 
+          JSON.parse(item.custom_data).isPackage && 
+          JSON.parse(item.custom_data).packageId === customData.packageId
+        );
+        
+        if (existingPackage) {
+          // Add to existing package
+          const packageData = JSON.parse(existingPackage.custom_data);
+          packageData.items.push({
+            id: newItem.id,
+            image: newItem.image,
+            name: newItem.name
+          });
+          existingPackage.custom_data = JSON.stringify(packageData);
+          existingPackage.quantity = packageData.items.length;
+          existingPackage.totalPrice = (customData.packagePrice / customData.packageSize) * packageData.items.length;
+        } else {
+          // Create new package
+          const packageItem = {
+            id: packageId,
+            name: `Custom Magnets Package (${customData.packageName})`,
+            price: customData.packagePrice / customData.packageSize,
+            quantity: 1,
+            totalPrice: customData.packagePrice / customData.packageSize,
+            image: newItem.image,
+            custom_data: JSON.stringify({
+              isPackage: true,
+              packageId: customData.packageId,
+              packageName: customData.packageName,
+              packagePrice: customData.packagePrice,
+              packageSize: customData.packageSize,
+              items: [{
+                id: newItem.id,
+                image: newItem.image,
+                name: newItem.name
+              }]
+            })
+          };
+          state.items.push(packageItem);
+        }
       } else {
-        state.items.push({
-          ...newItem,
-          image: newItem.image || null,
-          fileData: newItem.fileData || newItem.image || null,
-          quantity: 1,
-          totalPrice: newItem.price
-        });
+        // Handle regular items
+        const existingItem = state.items.find(item => item.id === newItem.id);
+        
+        if (existingItem) {
+          existingItem.quantity++;
+          existingItem.totalPrice = existingItem.price * existingItem.quantity;
+        } else {
+          state.items.push({
+            ...newItem,
+            image: newItem.image || null,
+            fileData: newItem.fileData || newItem.image || null,
+            quantity: 1,
+            totalPrice: newItem.price
+          });
+        }
       }
       
-      state.totalQuantity++;
-      state.totalAmount = state.items.reduce(
-        (total, item) => total + (item.price * item.quantity),
-        0
-      );
+      // Recalculate totals
+      state.totalQuantity = state.items.reduce((total, item) => total + item.quantity, 0);
+      state.totalAmount = state.items.reduce((total, item) => total + item.totalPrice, 0);
     },
     
     removeItem(state, action) {

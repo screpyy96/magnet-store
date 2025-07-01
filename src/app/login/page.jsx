@@ -56,26 +56,20 @@ function LoginForm() {
     setSuccessMessage('')
 
     try {
-      console.log('Attempting to sign in with:', { email: formData.email })
-      
       // Create a simpler signin object
       const signInData = {
         email: formData.email,
         password: formData.password,
       };
       
-      console.log('Sign in data:', signInData);
-      
       const result = await signIn(signInData, redirectUrl);
 
       if (result.success) {
-        console.log('Login successful, redirecting...');
+        // Login successful, redirecting handled by useEffect
       } else {
-        console.error('Login error details:', result.error)
         throw new Error(result.error)
       }
     } catch (error) {
-      console.error('Login error:', error)
       setError(error.message || 'Failed to sign in. Please check your credentials and try again.')
     } finally {
       setIsLoading(false)
@@ -87,17 +81,14 @@ function LoginForm() {
       setIsLoading(true)
       setError(null)
       
-      console.log('Attempting to sign in with Google');
-      
       const result = await signInWithGoogle(redirectUrl);
       
       if (!result.success) {
         throw new Error(result.error)
       }
       
-      // Acest cod nu se va executa din cauza redirecționării
+      // This code won't execute due to redirect
     } catch (error) {
-      console.error('Google sign in failed:', error)
       setError(error.message || 'Failed to sign in with Google. Please try again.')
       setIsLoading(false)
     }

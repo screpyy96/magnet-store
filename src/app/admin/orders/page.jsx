@@ -95,90 +95,41 @@ export default function OrdersManagement() {
 
   const loadOrders = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       
-      let query = supabase
-        .from('orders')
-        .select('*', { count: 'exact' })
-      
-      // Aplicarea filtrului de status
-      if (filter !== 'all') {
-        query = query.eq('status', filter)
+      // First, check if user is admin using RPC
+      const { data: adminCheck, error: adminError } = await supabase
+        .rpc('get_admin_orders', {
+          p_page: pagination.page,
+          p_page_size: pagination.pageSize,
+          p_filter: filter === 'all' ? null : filter,
+          p_search: searchTerm || null
+        });
+  
+      if (adminError) throw adminError;
+  
+      if (!adminCheck || !adminCheck.orders) {
+        throw new Error('No orders data returned');
       }
-      
-      // Aplicarea căutării doar pentru ID (vom face căutarea pentru email separat)
-      if (searchTerm) {
-        // Căutare după ID
-        query = query.ilike('id', `%${searchTerm}%`)
-      }
-      
-      // Paginare
-      const from = (pagination.page - 1) * pagination.pageSize
-      const to = from + pagination.pageSize - 1
-      
-      // Obținerea comenzilor
-      const { data: ordersData, count, error } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to)
-      
-      if (error) throw error
-      
-      // Dacă avem comenzi și avem nevoie de date despre utilizatori
-      let ordersWithUserInfo = []
-      if (ordersData && ordersData.length > 0) {
-        // Obținem ID-urile utilizatorilor din comenzi
-        const userIds = [...new Set(ordersData.map(order => order.user_id).filter(id => id))];
-        
-        // Preluăm datele profilurilor într-un query separat
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, email')
-          .in('id', userIds)
-        
-        if (profilesError) throw profilesError
-        
-        // Creăm un map pentru lookup rapid
-        const profilesMap = {}
-        if (profilesData) {
-          profilesData.forEach(profile => {
-            profilesMap[profile.id] = profile
-          })
-        }
-        
-        // Căutăm de asemenea în email-uri dacă avem termen de căutare
-        if (searchTerm && profilesData) {
-          const filteredProfileIds = profilesData
-            .filter(profile => profile.email && profile.email.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map(profile => profile.id);
-          
-          // Filtrăm comenzile care au user_id în filteredProfileIds dacă avem un termen de căutare
-          if (filteredProfileIds.length > 0) {
-            ordersData = ordersData.filter(order => 
-              order.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-              filteredProfileIds.includes(order.user_id)
-            );
-          }
-        }
-        
-        // Combinăm datele
-        ordersWithUserInfo = ordersData.map(order => ({
-          ...order,
-          profiles: profilesMap[order.user_id] || { email: 'N/A' }
-        }))
-      }
-      
-      setOrders(ordersWithUserInfo)
+  
+      // Parse the JSON data
+      const ordersData = adminCheck.orders;
+      const count = adminCheck.total_count || 0;
+  
+      setOrders(ordersData);
       setPagination({
         ...pagination,
-        totalCount: count || 0,
-        totalPages: Math.ceil((count || 0) / pagination.pageSize)
-      })
+        totalCount: count,
+        totalPages: Math.ceil(count / pagination.pageSize)
+      });
     } catch (error) {
-      console.error('Error loading orders:', error)
+      console.error('Error loading orders:', error);
+      // Show error to user
+      alert('Eroare la încărcarea comenzilor: ' + error.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
