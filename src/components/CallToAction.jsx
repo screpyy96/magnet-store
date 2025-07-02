@@ -16,8 +16,7 @@ export default function CallToAction() {
         </div>
         
         <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
-          Create Your Custom Magnets <br className="hidden md:block" />
-          <span className="text-yellow-300">Today & Save 15%</span>
+          Ready to Create Your Sweet Memories?
         </h2>
         
         <p className="text-xl text-white/90 mb-10 max-w-3xl mx-auto leading-relaxed">

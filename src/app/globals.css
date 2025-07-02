@@ -1,8 +1,18 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Quicksand:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+  font-family: 'Nunito', 'Quicksand', Arial, sans-serif;
+  background: linear-gradient(135deg, #fff7fb 0%, #fdf6f0 100%);
+  /* Subtle dots pattern */
+  background-image: radial-gradient(circle, #f9a8d4 1px, transparent 1px), radial-gradient(circle, #c4b5fd 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
+}
 
 /* Stiluri pentru a face mânerele de crop vizibile */
 .ReactCrop__crop-selection {

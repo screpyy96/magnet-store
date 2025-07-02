@@ -6,11 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { FcGoogle } from 'react-icons/fc'
 import React from 'react'
+import Image from 'next/image'
 
 // Loading component for Suspense
 function RegisterLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
     </div>
   );
@@ -96,15 +97,14 @@ function RegisterForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-pink-200 px-8 py-10 mx-auto">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
+          <Image src="/logo.png" alt="My Sweet Magnets Logo" width={64} height={64} className="mx-auto mb-4" />
+          <h2 className="text-3xl font-extrabold text-pink-700 text-center font-nunito flex items-center justify-center gap-2"><span>⭐</span>Create your account</h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Already have an account?{' '}
-            <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link href="/login" className="font-medium text-pink-600 hover:text-purple-500">
               Sign in
             </Link>
           </p>
@@ -120,7 +120,7 @@ function RegisterForm() {
           {/* Google Sign Up Button */}
           <button
             onClick={handleGoogleSignUp}
-            className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition"
+            className="w-full flex items-center justify-center px-4 py-2 border border-pink-200 rounded-full shadow-sm text-sm font-medium text-pink-700 bg-white hover:bg-pink-50 transition"
           >
             <FcGoogle className="h-5 w-5 mr-2" />
             Continue with Google
@@ -149,7 +149,7 @@ function RegisterForm() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full px-3 py-2 border border-pink-300 rounded-full shadow-sm focus:outline-none focus:ring-pink-400 focus:border-pink-400 bg-pink-50"
               />
             </div>
 
@@ -165,7 +165,7 @@ function RegisterForm() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full px-3 py-2 border border-pink-300 rounded-full shadow-sm focus:outline-none focus:ring-pink-400 focus:border-pink-400 bg-pink-50"
               />
             </div>
 
@@ -181,14 +181,14 @@ function RegisterForm() {
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full px-3 py-2 border border-pink-300 rounded-full shadow-sm focus:outline-none focus:ring-pink-400 focus:border-pink-400 bg-pink-50"
               />
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gradient-to-r from-pink-500 to-purple-500 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               {isLoading ? 'Creating account...' : 'Create account'}
             </button>
@@ -196,11 +196,11 @@ function RegisterForm() {
 
           <p className="text-xs text-center text-gray-500">
             By signing up, you agree to our{' '}
-            <Link href="/terms" className="text-indigo-600 hover:text-indigo-500">
+            <Link href="/terms" className="text-pink-600 hover:text-purple-500">
               Terms of Service
             </Link>{' '}
             and{' '}
-            <Link href="/privacy" className="text-indigo-600 hover:text-indigo-500">
+            <Link href="/privacy" className="text-pink-600 hover:text-purple-500">
               Privacy Policy
             </Link>
           </p>

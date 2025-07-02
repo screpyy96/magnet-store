@@ -8,6 +8,7 @@ import { HiHome, HiViewGrid, HiCamera, HiUser, HiMenu, HiX, HiChevronDown, HiInf
 import { FiShoppingBag, FiUser, FiLogOut, FiPackage, FiSettings } from 'react-icons/fi'
 import Cart from './Cart'
 import { AnimatePresence, motion } from 'framer-motion'
+import Image from 'next/image'
 
 const navigation = [
   { name: 'Home', href: '/', icon: HiHome },
@@ -52,8 +53,9 @@ export default function Navbar() {
           <div className="flex justify-between items-center h-16 md:h-20">
             {/* Left side - Logo */}
             <Link href="/" className="flex items-center group">
-              <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent transition-all duration-300 group-hover:opacity-90">
-                Magnet Store
+              <Image src="/logo.png" alt="My Sweet Magnets Logo" width={48} height={48} style={{ width: '48px', height: 'auto' }} className="mr-2 max-h-12 w-auto" />
+              <span className="text-lg font-bold sm:text-2xl bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent transition-all duration-300 group-hover:opacity-90">
+                My Sweet Magnets
               </span>
             </Link>
 
@@ -65,23 +67,23 @@ export default function Navbar() {
                   href={item.href}
                   className={`group relative px-3 py-2 text-sm font-medium transition-all duration-200 ${
                     pathname === item.href
-                      ? 'text-indigo-600'
-                      : 'text-gray-700 hover:text-indigo-600'
-                  } ${item.highlight ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5' : ''}`}
+                      ? 'text-pink-600'
+                      : 'text-gray-700 hover:text-pink-600'
+                  } ${item.highlight ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:-translate-y-0.5' : ''}`}
                 >
                   <div className="flex items-center">
                     {item.icon && <item.icon className="h-5 w-5 mr-2" />}
                     {item.name}
                   </div>
                   {!item.highlight && (
-                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-600 transition-all duration-300 group-hover:w-full"></span>
+                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-pink-600 transition-all duration-300 group-hover:w-full"></span>
                   )}
                 </Link>
               ))}
               {isAdmin && (
                 <Link
                   href="/admin/dashboard"
-                  className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-amber-100 to-amber-50 text-amber-800 border border-amber-200 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
+                  className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-pink-100 to-purple-100 text-pink-800 border border-pink-200 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
                 >
                   Admin
                 </Link>
@@ -95,7 +97,7 @@ export default function Navbar() {
               {/* Mobile menu button */}
               <button 
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none md:hidden"
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-pink-600 hover:bg-gray-100 focus:outline-none md:hidden"
                 aria-expanded="false"
               >
                 <span className="sr-only">Open main menu</span>
@@ -111,9 +113,9 @@ export default function Navbar() {
                 <div className="hidden md:flex relative" ref={menuRef}>
                   <button
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                    className="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 bg-white hover:bg-gray-50 px-2.5 py-2 rounded-xl transition-all duration-200 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 overflow-hidden group"
+                    className="flex items-center space-x-2 text-gray-700 hover:text-pink-600 bg-white hover:bg-gray-50 px-2.5 py-2 rounded-xl transition-all duration-200 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 overflow-hidden group"
                   >
-                    <span className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm relative overflow-hidden">
+                    <span className="h-9 w-9 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-white font-medium text-sm relative overflow-hidden">
                       {user.email?.[0].toUpperCase()}
                       <span className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                     </span>
@@ -137,14 +139,14 @@ export default function Navbar() {
                         transition={{ duration: 0.15, ease: 'easeOut' }}
                         className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden z-50"
                       >
-                        <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+                        <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-pink-50 to-purple-50">
                           <div className="flex items-center space-x-3">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-medium text-lg">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-white font-medium text-lg">
                               {user.email?.[0].toUpperCase()}
                             </div>
                             <div>
                               <p className="text-sm font-medium text-gray-900">{user.email}</p>
-                              <p className="text-xs text-indigo-600">View account</p>
+                              <p className="text-xs text-pink-600">View account</p>
                             </div>
                           </div>
                         </div>
@@ -169,9 +171,9 @@ export default function Navbar() {
                             <Link 
                               href="/admin/dashboard" 
                               onClick={() => setIsProfileMenuOpen(false)}
-                              className="flex items-center px-4 py-3 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors border-t border-gray-100 mt-1"
+                              className="flex items-center px-4 py-3 text-sm text-pink-600 hover:bg-pink-50 transition-colors border-t border-gray-100 mt-1"
                             >
-                              <FiSettings className="h-5 w-5 text-indigo-500 mr-3" />
+                              <FiSettings className="h-5 w-5 text-pink-500 mr-3" />
                               <span>Admin Dashboard</span>
                             </Link>
                           )}
@@ -190,7 +192,7 @@ export default function Navbar() {
               ) : (
                 <Link
                   href="/login"
-                  className="hidden md:inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors"
+                  className="hidden md:inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-pink-600 hover:bg-pink-700 shadow-sm transition-colors"
                 >
                   <HiUser className="h-4 w-4 mr-2" />
                   Account
@@ -219,7 +221,7 @@ export default function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center px-4 py-4 text-lg font-medium rounded-xl mx-2 transition-all duration-200 ${
                     pathname === item.href
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg'
                       : 'text-gray-700 hover:bg-gray-100 hover:pl-6'
                   }`}
                 >
@@ -243,7 +245,7 @@ export default function Navbar() {
                       <Link
                         href="/admin/dashboard"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center px-4 py-4 text-lg font-medium rounded-xl mx-2 text-amber-700 hover:bg-amber-50 hover:pl-6 transition-all duration-200"
+                        className="flex items-center px-4 py-4 text-lg font-medium rounded-xl mx-2 text-pink-700 hover:bg-pink-50 hover:pl-6 transition-all duration-200"
                       >
                         <FiSettings className="h-6 w-6 mr-4" />
                         Admin Dashboard
@@ -262,7 +264,7 @@ export default function Navbar() {
                     <Link
                       href="/login"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center px-4 py-4 text-lg font-medium rounded-xl mx-2 bg-indigo-600 text-white hover:bg-indigo-700 transition-all duration-200"
+                      className="flex items-center px-4 py-4 text-lg font-medium rounded-xl mx-2 bg-pink-600 text-white hover:bg-pink-700 transition-all duration-200"
                     >
                       <HiUser className="h-6 w-6 mr-4" />
                       Sign In
@@ -294,12 +296,12 @@ export default function Navbar() {
                 href={item.href}
                 className={`flex flex-col items-center justify-center space-y-1 transition-all duration-200 relative ${
                   isActive 
-                    ? 'text-indigo-600' 
-                    : 'text-gray-500 hover:text-indigo-600'
+                    ? 'text-pink-600' 
+                    : 'text-gray-500 hover:text-pink-600'
                 }`}
               >
                 {isActive && (
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-indigo-600 rounded-b-full" />
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-pink-600 rounded-b-full" />
                 )}
                 <item.icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
                 <span className={`text-xs font-medium ${isActive ? 'font-semibold' : ''}`}>

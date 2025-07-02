@@ -1,23 +1,40 @@
-# https://www.robotstxt.org/robotstxt.html
+# robots.txt for My Sweet Magnets UK
+# https://mysweetmagnets.co.uk/robots.txt
+
 User-agent: *
 Allow: /
+Allow: /custom
+Allow: /about
+Allow: /contact
+Allow: /faq
+Allow: /blog
 
-# Sitemaps
+# Sitemap
 Sitemap: https://mysweetmagnets.co.uk/sitemap.xml
+Sitemap: https://mysweetmagnets.co.uk/sitemap-1.xml
 
-# Disallow admin and API routes
-Disallow: /admin
-Disallow: /api
-Disallow: /account
-Disallow: /checkout
-Disallow: /cart
+# Disallow search engines from indexing admin and private areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /account/
+Disallow: /checkout/
+Disallow: /cart/
 Disallow: /login
 Disallow: /register
 Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /*?*
+Disallow: /*?$
+Disallow: /*?ref=*
+
+# Allow crawling of all JS and CSS
+Allow: /*.css$
+Allow: /*.js$
 
 # Crawl-delay: 10  # Uncomment if needed to prevent server overload
 
-# Allow all JS and CSS files for proper rendering
+# Host
+Host: https://mysweetmagnets.co.uk
 Allow: /*.js$
 Allow: /*.css$
 

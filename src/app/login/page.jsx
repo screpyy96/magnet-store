@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { FcGoogle } from 'react-icons/fc'
+import Image from 'next/image'
 
 function LoginForm() {
   const router = useRouter()
@@ -95,15 +96,14 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-pink-200 px-8 py-6 mx-auto">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <Image src="/logo.png" alt="My Sweet Magnets Logo" width={64} height={64} className="mx-auto mb-4" />
+          <h2 className="text-center font-bold text-pink-700 font-nunito text-lg on-mobile:text-2xl mb-2">Sign in to your account</h2>
+          <p className="mt-2 text-center text-sm text-gray-600 mb-4">
             Or{' '}
-            <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link href="/register" className="font-medium text-pink-600 hover:text-purple-500">
               create a new account
             </Link>
           </p>
@@ -125,7 +125,7 @@ function LoginForm() {
           {/* Google Sign In Button */}
           <button
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition"
+            className="w-full flex items-center justify-center px-4 py-3 border border-pink-200 rounded-full shadow-sm text-sm font-medium text-pink-700 bg-white hover:bg-pink-50 transition mb-4"
           >
             <FcGoogle className="h-5 w-5 mr-2" />
             Continue with Google
@@ -133,17 +133,17 @@ function LoginForm() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+              <div className="w-full border-t border-pink-300" />
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+            <div className="relative flex justify-center text-sm mt-4 mb-4">
+              <span className="px-2 bg-pink-50 text-pink-500">Or continue with</span>
             </div>
           </div>
 
           {/* Email/Password Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-pink-700">
                 Email address
               </label>
               <input
@@ -154,12 +154,12 @@ function LoginForm() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full px-3 py-2 border border-pink-300 rounded-full shadow-sm focus:outline-none focus:ring-pink-400 focus:border-pink-400 bg-pink-50 mb-3"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-pink-700">
                 Password
               </label>
               <input
@@ -170,7 +170,7 @@ function LoginForm() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="mt-1 block w-full px-3 py-2 border border-pink-300 rounded-full shadow-sm focus:outline-none focus:ring-pink-400 focus:border-pink-400 bg-pink-50 mb-3"
               />
             </div>
 
@@ -180,15 +180,15 @@ function LoginForm() {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-pink-600 focus:ring-pink-400 border-pink-300 rounded"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-pink-900">
                   Remember me
                 </label>
               </div>
 
               <div className="text-sm">
-                <Link href="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+                <Link href="/forgot-password" className="font-medium text-pink-600 hover:text-purple-500">
                   Forgot your password?
                 </Link>
               </div>
@@ -197,7 +197,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-gradient-to-r from-pink-500 to-purple-500 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 disabled:opacity-50 disabled:cursor-not-allowed transition mt-4"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
@@ -211,8 +211,8 @@ function LoginForm() {
 // Loading fallback UI for the Suspense boundary
 function LoginLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600"></div>
     </div>
   );
 }

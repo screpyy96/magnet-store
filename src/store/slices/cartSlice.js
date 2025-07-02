@@ -12,20 +12,27 @@ const cartSlice = createSlice({
   reducers: {
     addItem(state, action) {
       const newItem = action.payload;
+      const customData = newItem.custom_data ? JSON.parse(newItem.custom_data) : null;
       
-      // For package items, we need to handle them specially
-      const isPackageItem = newItem.custom_data && JSON.parse(newItem.custom_data).isPartOfPackage;
+      // Check if this is a package item or single magnet
+      const isPackageItem = customData && customData.packageId && customData.packageId !== '1';
+      
+      // Check if this is a single magnet (packageId = 1)
+      const isSingleMagnet = customData && customData.packageId === '1';
       
       if (isPackageItem) {
-        const customData = JSON.parse(newItem.custom_data);
+        // Handle package items
         const packageId = `package-${customData.packageId}`;
         
-        // Try to find existing package
-        const existingPackage = state.items.find(item => 
-          item.custom_data && 
-          JSON.parse(item.custom_data).isPackage && 
-          JSON.parse(item.custom_data).packageId === customData.packageId
-        );
+        // Try to find existing package of the same type
+        const existingPackage = state.items.find(item => {
+          try {
+            const itemData = item.custom_data ? JSON.parse(item.custom_data) : null;
+            return itemData && itemData.isPackage && itemData.packageId === customData.packageId;
+          } catch (e) {
+            return false;
+          }
+        });
         
         if (existingPackage) {
           // Add to existing package
@@ -35,6 +42,8 @@ const cartSlice = createSlice({
             image: newItem.image,
             name: newItem.name
           });
+          
+          // Update package data
           existingPackage.custom_data = JSON.stringify(packageData);
           existingPackage.quantity = packageData.items.length;
           existingPackage.totalPrice = (customData.packagePrice / customData.packageSize) * packageData.items.length;
@@ -45,7 +54,7 @@ const cartSlice = createSlice({
             name: `Custom Magnets Package (${customData.packageName})`,
             price: customData.packagePrice / customData.packageSize,
             quantity: 1,
-            totalPrice: customData.packagePrice / customData.packageSize,
+            totalPrice: customData.packagePrice,
             image: newItem.image,
             custom_data: JSON.stringify({
               isPackage: true,
@@ -62,8 +71,17 @@ const cartSlice = createSlice({
           };
           state.items.push(packageItem);
         }
+      } else if (isSingleMagnet) {
+        // Handle single magnets - always add as separate items
+        state.items.push({
+          ...newItem,
+          image: newItem.image || null,
+          fileData: newItem.fileData || newItem.image || null,
+          quantity: 1,
+          totalPrice: newItem.price
+        });
       } else {
-        // Handle regular items
+        // Handle regular non-magnet items
         const existingItem = state.items.find(item => item.id === newItem.id);
         
         if (existingItem) {
@@ -72,8 +90,6 @@ const cartSlice = createSlice({
         } else {
           state.items.push({
             ...newItem,
-            image: newItem.image || null,
-            fileData: newItem.fileData || newItem.image || null,
             quantity: 1,
             totalPrice: newItem.price
           });

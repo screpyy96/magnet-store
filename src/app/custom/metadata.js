@@ -1,48 +1,42 @@
+import { metadata as mainMetadata } from '../metadata';
+
 export const metadata = {
-  title: 'Create Custom Magnets | MagnetCraft',
-  description: 'Design your own personalized fridge magnets. Upload photos, customize size and quantity, and create beautiful memories that stick. High-quality custom magnets starting at £9.99.',
+  ...mainMetadata,
+  title: 'Create Custom Photo Magnets | Design Yours Online | My Sweet Magnets UK',
+  description: 'Design your own personalised fridge magnets with our easy-to-use online tool. Upload photos, choose from various sizes & shapes, and create beautiful memories that stick. High-quality custom magnets starting at £9.99 with fast UK delivery.',
   keywords: [
-    'custom magnets',
-    'photo magnets',
-    'personalized magnets',
-    'fridge magnets',
-    'custom gifts',
-    'photo gifts',
-    'magnetic photos',
-    'custom photo magnets'
+    ...mainMetadata.keywords,
+    'create custom magnets', 'design your own magnets', 'personalised magnets UK',
+    'custom photo magnets online', 'make your own magnets', 'photo magnet maker',
+    'custom fridge magnets design', 'personalised photo magnets UK', 'magnet creator',
+    'custom magnet designer', 'photo magnet creator UK', 'bespoke magnets online'
   ],
+  alternates: {
+    canonical: '/custom',
+  },
   openGraph: {
-    title: 'Create Your Custom Photo Magnets | MagnetCraft',
-    description: 'Transform your favorite photos into beautiful fridge magnets. Easy to create, perfect to gift. High-quality custom magnets starting at £9.99.',
+    ...mainMetadata.openGraph,
+    title: 'Create Custom Photo Magnets | Design Yours Online | My Sweet Magnets UK',
+    description: 'Design your own personalised fridge magnets with our easy-to-use online tool. Upload photos, choose from various sizes & shapes, and create beautiful memories that stick. High-quality custom magnets starting at £9.99 with fast UK delivery.',
+    url: 'https://mysweetmagnets.co.uk/custom',
     images: [
       {
-        url: 'https://images.unsplash.com/photo-1591129841117-3adfd313e34f',
+        url: '/images/og-custom-magnets.jpg',
         width: 1200,
         height: 630,
-        alt: 'Custom Photo Magnets Creation'
+        alt: 'Create Custom Photo Magnets Online - My Sweet Magnets UK'
       }
-    ],
-    locale: 'en_GB',
-    type: 'website',
+    ]
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'Create Custom Photo Magnets | MagnetCraft',
-    description: 'Transform your photos into beautiful fridge magnets. Easy to create, perfect to gift. Starting at £9.99.',
-    images: ['https://images.unsplash.com/photo-1591129841117-3adfd313e34f'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-  alternates: {
-    canonical: 'https://magnetcraft.com/custom'
+    ...mainMetadata.twitter,
+    title: 'Create Custom Photo Magnets | Design Yours Online',
+    description: '✨ Design your own personalised fridge magnets with our easy online tool. Upload photos, customize & order today! #CustomMagnets #PhotoGifts #UKMade',
+    images: [{
+      url: '/images/twitter-custom-magnets.jpg',
+      alt: 'Create Custom Photo Magnets - My Sweet Magnets UK',
+      width: 1200,
+      height: 628
+    }]
   }
-} 
+}

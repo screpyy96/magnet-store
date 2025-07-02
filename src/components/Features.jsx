@@ -10,11 +10,11 @@ export default function Features() {
             <div className="w-32 h-32 bg-indigo-100 rounded-full opacity-70 blur-2xl"></div>
           </div>
           <div className="relative">
-            <span className="inline-block px-4 py-1.5 mb-4 text-xs font-semibold tracking-wider text-indigo-700 uppercase bg-indigo-100 rounded-full">Why Choose Us</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">The Magic Behind Our Magnets</h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 mx-auto mb-6 rounded-full"></div>
+            <span className="inline-block px-4 py-1.5 mb-4 text-xs font-semibold tracking-wider text-pink-700 uppercase bg-pink-100 rounded-full">Why UK Loves Us</span>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">The My Sweet Magnets Difference</h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-pink-400 to-purple-500 mx-auto mb-6 rounded-full"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We combine premium materials with beautiful design to create magnets that bring joy to your everyday life.
+              Handcrafted in the UK with love, our personalised magnets turn your precious memories into beautiful keepsakes that last a lifetime.
             </p>
           </div>
         </div>
@@ -26,37 +26,37 @@ export default function Features() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             
             <div className="relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 text-white shadow-lg transform group-hover:rotate-6 transition-transform duration-300">
+              <div className="w-16 h-16 bg-gradient-to-br from-pink-400 to-pink-500 rounded-2xl flex items-center justify-center mb-6 text-white shadow-lg transform group-hover:rotate-6 transition-transform duration-300">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
               
-              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors duration-300">Premium Quality Printing</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-pink-500 transition-colors duration-300">Premium British Quality</h3>
               
               <p className="text-gray-600 mb-6 leading-relaxed">
-                Our advanced printing technology ensures your photos look vibrant and crystal clear on every magnet, preserving your memories in stunning detail.
+                Every magnet is meticulously crafted in the UK using the finest materials and state-of-the-art printing technology for vibrant, long-lasting results.
               </p>
               
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center text-sm text-gray-500">
-                  <svg className="w-4 h-4 mr-2 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4 mr-2 text-pink-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  High-resolution printing
+                  High-resolution, photo-quality printing
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
-                  <svg className="w-4 h-4 mr-2 text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-4 h-4 mr-2 text-pink-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Vibrant, fade-resistant colors
+                  Vibrant, fade-resistant colours
                 </li>
               </ul>
               <Link 
-                href="/products" 
-                className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 group"
+                href="/gallery" 
+                className="inline-flex items-center text-sm font-medium text-pink-600 hover:text-pink-800 group"
               >
-                See examples
+                View our gallery
                 <svg className="ml-1 w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                 </svg>
@@ -69,16 +69,16 @@ export default function Features() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             
             <div className="relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 text-white shadow-lg transform group-hover:rotate-6 transition-transform duration-300">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-500 rounded-2xl flex items-center justify-center mb-6 text-white shadow-lg transform group-hover:rotate-6 transition-transform duration-300">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                 </svg>
               </div>
               
-              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-600 transition-colors duration-300">Durable Materials</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-500 transition-colors duration-300">UK-Made Excellence</h3>
               
               <p className="text-gray-600 mb-6 leading-relaxed">
-                Made to last with strong magnetic backing and water-resistant coating, our magnets maintain their quality and strength for years to come.
+                Proudly made in the UK using premium, eco-friendly materials. Our magnets feature strong magnetic backing and a protective coating for long-lasting durability.
               </p>
               
               <ul className="space-y-2 mb-6">
@@ -86,20 +86,20 @@ export default function Features() {
                   <svg className="w-4 h-4 mr-2 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Water and UV resistant
+                  Water and UV resistant finish
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <svg className="w-4 h-4 mr-2 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  Strong magnetic backing
+                  Extra-strong magnetic backing
                 </li>
               </ul>
               <Link 
-                href="/materials" 
+                href="/about" 
                 className="inline-flex items-center text-sm font-medium text-purple-600 hover:text-purple-800 group"
               >
-                Learn about our materials
+                About our materials
                 <svg className="ml-1 w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                 </svg>

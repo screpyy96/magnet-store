@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -16,6 +16,7 @@ import DeliveryInfo from '@/components/custom/DeliveryInfo'
 import { useToast } from '@/contexts/ToastContext'
 
 import { safeLocalStorage } from '@/utils/localStorage'
+import { ProductSchema } from '@/components/SEO/ProductSchema'
 // Storage functions will be used during checkout, not here
 
 // Package configurations for bulk orders
@@ -132,11 +133,40 @@ export default function Custom() {
     setIsClient(true);
   }, []);
 
+  // Handle package selection
+  const handlePackageSelect = useCallback((pkg) => {
+    const previousPackage = selectedPackage;
+    setSelectedPackage(pkg);
+    
+    // Clear existing items if changing package type
+    if (previousPackage && pkg.id !== previousPackage.id) {
+      // Only clear items that are part of the previous package
+      const itemsToKeep = orderItems.filter(item => {
+        try {
+          const itemData = item.custom_data ? JSON.parse(item.custom_data) : null;
+          // Keep items that are not part of any package or are single magnets
+          return !itemData || itemData.packageId === '1' || itemData.packageId !== previousPackage.id;
+        } catch (e) {
+          return true;
+        }
+      });
+      
+      // Clear the cart and add back the items we want to keep
+      dispatch(clearCart());
+      itemsToKeep.forEach(item => {
+        // Re-add the item with its original quantity
+        dispatch(addItem({...item, quantity: item.quantity || 1}));
+      });
+      
+      setCurrentImage(null);
+    }
+  }, [selectedPackage, orderItems, dispatch]);
+
   // Initialize selected package from URL or default
   useEffect(() => {
     const pkg = getInitialPackage();
-    setSelectedPackage(pkg);
-  }, []);
+    handlePackageSelect(pkg);
+  }, [handlePackageSelect]);
 
   // Handle client-side operations after mount
   useEffect(() => {
@@ -167,12 +197,10 @@ export default function Custom() {
     const orderData = safeLocalStorage.getJSON('customMagnetOrder');
     if (orderData) {
       const pkg = getInitialPackage();
-      
       // If the package matches, add the images to the cart
       if (orderData.packageSize === parseInt(pkg.id)) {
         orderData.images.forEach((imageUrl, index) => {
           const pricePerMagnet = pkg.pricePerUnit || pkg.price;
-          
           const newItem = {
             id: `custom-${Date.now()}-${index}`,
             name: `Custom Magnet ${index + 1} (${pkg.name})`,
@@ -195,9 +223,9 @@ export default function Custom() {
           dispatch(addItem(newItem));
         });
         safeLocalStorage.removeItem('customMagnetOrder');
+        showToast('Your images have been imported. You can continue customizing your magnets!', 'success');
       }
     }
-    
     // If we're on /custom-order, redirect to /custom with the same parameters
     if (window.location.pathname === '/custom-order') {
       const params = new URLSearchParams(window.location.search);
@@ -304,21 +332,27 @@ export default function Custom() {
       // Get existing images from localStorage
       const existingImages = safeLocalStorage.getJSON('customMagnetImages') || [];
       existingImages.push(imageData);
-      safeLocalStorage.setJSON('customMagnetImages', existingImages);
+      
+      // Try to save with automatic cleanup on quota errors
+      const saveSuccess = safeLocalStorage.setJSON('customMagnetImages', existingImages);
+      if (!saveSuccess) {
+        showToast('Storage limit reached. Some older images were removed to make space.', 'warning');
+      }
       
       // Calculate correct price per magnet for the selected package
       const pricePerMagnet = selectedPackage.pricePerUnit || selectedPackage.price;
       
-      // Add single magnet to cart with thumbnail
+      // Add single magnet to cart with minimal data (no large base64 images)
       const magnetItem = {
         id: `magnet-${Date.now()}-${Math.random()}`,
         name: `${imageName} (${selectedSize}cm)`,
         price: pricePerMagnet, // Use price per unit, not total package price
         quantity: 1,
+        // Use data URLs only for display, not for storage
         image_url: thumbnailBase64,
         image: thumbnailBase64,
-        fileData: thumbnailBase64,
-        localImageData: imageData, // Store both versions
+        // Reference to localStorage data instead of storing directly
+        imageTimestamp: imageData.timestamp,
         custom_data: JSON.stringify({
           type: 'custom_magnet',
           size: selectedSize,
@@ -326,7 +360,8 @@ export default function Custom() {
           packageId: selectedPackage.id,
           packageName: selectedPackage.name,
           packagePrice: selectedPackage.price,
-          pricePerUnit: pricePerMagnet
+          pricePerUnit: pricePerMagnet,
+          imageTimestamp: imageData.timestamp
         })
       };
       
@@ -339,6 +374,13 @@ export default function Custom() {
       
       return imageData;
     } catch (error) {
+      const isStorageError = error.message && error.message.toLowerCase().includes('quota');
+      if (isStorageError) {
+        showToast('Storage full! Cleared old data to continue. Please try again.', 'warning');
+        // Try to clear some space
+        safeLocalStorage.removeItem('persist:root');
+        throw new Error('Storage quota exceeded. Please try uploading again.');
+      }
       throw new Error('Failed to process ' + imageName + ': ' + error.message);
     }
   }
@@ -373,9 +415,14 @@ export default function Custom() {
       // Get existing images from localStorage
       const existingImages = safeLocalStorage.getJSON('customMagnetImages') || [];
       existingImages.push(imageData);
-      safeLocalStorage.setJSON('customMagnetImages', existingImages);
       
-      // Add single magnet to cart with thumbnail
+      // Try to save with automatic cleanup on quota errors
+      const saveSuccess = safeLocalStorage.setJSON('customMagnetImages', existingImages);
+      if (!saveSuccess) {
+        showToast('Storage limit reached. Some older images were removed to make space.', 'warning');
+      }
+      
+      // Add single magnet to cart with minimal data
       // Calculate correct price per magnet for the selected package
       const pricePerMagnet = selectedPackage.pricePerUnit || selectedPackage.price;
       
@@ -384,10 +431,11 @@ export default function Custom() {
         name: `Custom Photo Magnet (${selectedSize}cm)`,
         price: pricePerMagnet, // Use price per unit, not total package price
         quantity: 1,
+        // Use data URLs only for display, not for storage
         image_url: thumbnailBase64,
         image: thumbnailBase64,
-        fileData: thumbnailBase64,
-        localImageData: imageData, // Store both versions
+        // Reference to localStorage data instead of storing directly
+        imageTimestamp: imageData.timestamp,
         custom_data: JSON.stringify({
           type: 'custom_magnet',
           size: selectedSize,
@@ -395,7 +443,8 @@ export default function Custom() {
           packageId: selectedPackage.id,
           packageName: selectedPackage.name,
           packagePrice: selectedPackage.price,
-          pricePerUnit: pricePerMagnet
+          pricePerUnit: pricePerMagnet,
+          imageTimestamp: imageData.timestamp
         })
       };
       
@@ -409,6 +458,14 @@ export default function Custom() {
       
       return thumbnailBase64;
     } catch (error) {
+      const isStorageError = error.message && error.message.toLowerCase().includes('quota');
+      if (isStorageError) {
+        showToast('Storage full! Cleared old data to continue. Please try again.', 'warning');
+        // Try to clear some space
+        safeLocalStorage.removeItem('persist:root');
+        setIsLoading(false);
+        return;
+      }
       showToast('Error processing image: ' + (error.message || 'Unknown error'), 'error');
       throw new Error('Failed to process image: ' + (error.message || 'Unknown error'));
     } finally {
@@ -493,7 +550,7 @@ export default function Custom() {
   // No auth required for custom page - guests can design magnets
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-pink-50 min-h-screen">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -513,193 +570,23 @@ export default function Custom() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left Column - Design Area */}
-          <div className="space-y-6">
-            {/* Preview */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Design Preview</h2>
-              <MagnetPreview 
-                imageUrl={currentImage} 
-                size={`${selectedSize}cm`}
-                finish={selectedFinish}
-              />
-
-              {/* Upload Progress Bar */}
-              {uploadProgress > 0 && (
-                <div className="mt-4 space-y-2">
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Processing images...</span>
-                    <span>{Math.round(uploadProgress)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Package Progress */}
-              {selectedPackage && parseInt(selectedPackage.id) > 1 && (
-                <div className="mt-4 bg-indigo-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-indigo-900">Package Progress</h3>
-                    <span className="text-xs text-indigo-600">
-                      {orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length} / {selectedPackage.id} images
-                    </span>
-                  </div>
-                  <div className="w-full bg-indigo-200 rounded-full h-2 mb-2">
-                    <div 
-                      className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${(orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length / parseInt(selectedPackage.id)) * 100}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-indigo-700">
-                    {parseInt(selectedPackage.id) - orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length > 0 
-                      ? `${parseInt(selectedPackage.id) - orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length} more images needed`
-                      : 'Package complete! All images uploaded.'
-                    }
-                  </p>
-                </div>
-              )}
-
-             
-            </div>
-
-            Upload Area
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Upload Your Photo</h3>
-              
-              {!currentEditingFile && (
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    <ImageUploader 
-                      onFileChange={handleFileChange} 
-                      maxFiles={selectedPackage ? Math.max(1, parseInt(selectedPackage.id) - orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length) : 1}
-                    />
-                    
-                    {/* Upload Help Text */}
-                    {selectedPackage && parseInt(selectedPackage.id) > 1 && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <div className="flex items-start">
-                          <div className="flex-shrink-0">
-                            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <div className="ml-3">
-                            <h3 className="text-sm font-medium text-blue-800">
-                              How to upload {selectedPackage.id} images:
-                            </h3>
-                            <div className="mt-2 text-sm text-blue-700">
-                              <ul className="list-disc list-inside space-y-1">
-                                <li><strong>Option 1:</strong> Select {Math.max(1, parseInt(selectedPackage.id) - uploadedImages.length)} images at once</li>
-                                <li><strong>Option 2:</strong> Upload one image at a time</li>
-                                <li>Each image will be added to your package automatically</li>
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {selectedPackage && parseInt(selectedPackage.id) > 1 && uploadedImages.length < parseInt(selectedPackage.id) && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <div className="flex items-start">
-                        <div className="flex-shrink-0">
-                          <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div className="ml-3">
-                          <h3 className="text-sm font-medium text-yellow-800">
-                            More images needed
-                          </h3>
-                          <div className="mt-2 text-sm text-yellow-700">
-                            <p>
-                              You need to upload {parseInt(selectedPackage.id) - uploadedImages.length} more image(s) to complete your {selectedPackage.name} package.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedPackage && parseInt(selectedPackage.id) > 1 && uploadedImages.length >= parseInt(selectedPackage.id) && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-start">
-                        <div className="flex-shrink-0">
-                          <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div className="ml-3">
-                          <h3 className="text-sm font-medium text-green-800">
-                            Package Complete!
-                          </h3>
-                          <div className="mt-2 text-sm text-green-700">
-                            <p>
-                              Your {selectedPackage.name} is ready! All {selectedPackage.id} images have been uploaded.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {currentEditingFile && (
-                <ImageEditor
-                  file={currentEditingFile}
-                  onImageCropped={handleCroppedImage}
-                  onCancel={() => {
-                    setCurrentEditingFile(null);
-                    setError(null);
-                  }}
-                  isLoading={isLoading}
-                />
-              )}
-
-              {error && (
-                <div className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-                  {error}
-                </div>
-              )}
-            </div>
-
-            {/* Product Options */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Customize Your Magnet</h3>
-              <ProductOptions
-                selectedSize={selectedSize}
-                selectedFinish={selectedFinish}
-                onSizeChange={setSelectedSize}
-                onFinishChange={setSelectedFinish}
-              />
-            </div>
-          </div>
-
-          {/* Right Column - Product Info & Cart */}
-          <div className="space-y-6">
-            {/* Product Header */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Custom Photo Magnet</h1>
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:gap-8">
+          {/* Left column (on desktop): Product Info, Package, Customize, Delivery, Details */}
+          <div className="flex flex-col gap-6 order-2 lg:order-1">
+            {/* Custom Photo Magnet - Title, Price, Package Selection */}
+            <div className="bg-white rounded-xl shadow-sm border border-pink-200 p-6">
+              <h1 className="text-2xl font-bold text-pink-900 mb-2">Custom Photo Magnet</h1>
               <div className="flex items-center space-x-4 mb-4">
-                <span className="text-3xl font-bold text-gray-900">£{selectedPackage?.price.toFixed(2)}</span>
+                <span className="text-3xl font-bold text-pink-900">£{selectedPackage?.price.toFixed(2)}</span>
                 {selectedPackage?.id !== '1' && (
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-pink-500">
                     £{selectedPackage?.pricePerUnit.toFixed(2)} each
                   </span>
                 )}
               </div>
-              
               {/* Package Selection */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-900 mb-3">
+                <label className="block text-sm font-medium text-pink-900 mb-3">
                   QUANTITY
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -709,345 +596,110 @@ export default function Custom() {
                       onClick={() => setSelectedPackage(pkg)}
                       className={`p-3 border rounded-lg text-center transition-colors relative ${
                         selectedPackage?.id === pkg.id
-                          ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
-                          : 'border-gray-200 hover:border-indigo-300'
+                          ? 'border-pink-500 bg-pink-50 ring-1 ring-pink-500'
+                          : 'border-pink-200 hover:border-pink-300'
                       }`}
                     >
                       {pkg.tag && (
-                        <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                        <span className="absolute -top-2 -right-2 bg-yellow-500 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
                           {pkg.tag}
                         </span>
                       )}
-                      <div className="font-medium text-gray-900">{pkg.name}</div>
-                      <div className="text-lg font-bold text-indigo-600">£{pkg.price.toFixed(2)}</div>
-                      <div className="text-xs text-gray-500">{pkg.description}</div>
+                      <div className="font-medium text-pink-900">{pkg.name}</div>
+                      <div className="text-lg font-bold text-pink-600">£{pkg.price.toFixed(2)}</div>
+                      <div className="text-xs text-pink-500">{pkg.description}</div>
                     </button>
                   ))}
                 </div>
               </div>
+            </div>
 
-              {/* Smart Action Buttons */}
-              <div className="space-y-3">
-                {/* Upload Images Button */}
-                <button
-                  onClick={() => document.querySelector('input[type="file"]')?.click()}
-                  disabled={isLoading}
-                  className="w-full bg-indigo-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? 'Processing...' : (
-                    orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length === 0 
-                      ? `Upload ${selectedPackage?.id === '1' ? 'Image' : `${selectedPackage?.id} Images`}`
-                      : orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length < parseInt(selectedPackage?.id || '1')
-                        ? `Upload ${parseInt(selectedPackage?.id || '1') - orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length} More Images`
-                        : 'Upload More Images'
-                  )}
-                </button>
-
-                {/* Package Completion Actions */}
-                                 {parseInt(selectedPackage?.id || '1') > 1 && orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length > 0 && (
-                   <div className="text-center">
-                     {orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length < parseInt(selectedPackage?.id || '1') ? (
-                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                         <p className="text-sm text-yellow-800">
-                           <strong>{parseInt(selectedPackage?.id || '1') - orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length} more images needed</strong> to complete your {selectedPackage?.name} package
-                         </p>
-                         <p className="text-xs text-yellow-600 mt-1">
-                           You can upload them one by one or select multiple files at once
-                         </p>
-                       </div>
-                     ) : (
-                       <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                         <div className="flex items-center justify-center text-green-800 mb-2">
-                           <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                           </svg>
-                           <strong>Package Complete!</strong>
-                         </div>
-                         <p className="text-sm text-green-700">
-                           All {selectedPackage?.id} images uploaded. Your {selectedPackage?.name} is ready for checkout!
-                         </p>
-                       </div>
-                     )}
-                   </div>
-                 )}
-              </div>
+            {/* Customize Your Magnet */}
+            <div className="bg-white rounded-xl shadow-sm border border-pink-200 p-6">
+              <h3 className="text-lg font-medium text-pink-900 mb-4">Customize Your Magnet</h3>
+              <ProductOptions
+                selectedSize={selectedSize}
+                selectedFinish={selectedFinish}
+                onSizeChange={setSelectedSize}
+                onFinishChange={setSelectedFinish}
+              />
             </div>
 
             {/* Delivery Info */}
             <DeliveryInfo />
 
-            {/* Smart Package-Aware Cart */}
-            {orderItems.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Your Cart</h3>
-                  <button 
-                    onClick={() => {
-                      dispatch(clearCart());
-                      setCurrentImage(null);
-                      // Clear localStorage as well
-                      safeLocalStorage.removeItem('customMagnetImages');
-                    }} 
-                    className="text-sm text-red-500 hover:text-red-700"
-                  >
-                    Clear All
-                  </button>
-                </div>
-                
-                {/* Smart Package Grouping */}
-                {(() => {
-                  // Group items by package
-                  const packageGroups = {};
-                  orderItems.forEach((item, index) => {
-                    try {
-                      const customData = JSON.parse(item.custom_data || '{}');
-                      const packageId = customData.packageId || '1';
-                      const packageName = customData.packageName || '1 Custom Magnet';
-                      const packagePrice = customData.packagePrice || item.price;
-                      
-                      if (!packageGroups[packageId]) {
-                        packageGroups[packageId] = {
-                          packageId,
-                          packageName,
-                          packagePrice,
-                          items: [],
-                          totalCount: 0,
-                          totalPrice: 0
-                        };
-                      }
-                      
-                      packageGroups[packageId].items.push({ ...item, originalIndex: index });
-                      packageGroups[packageId].totalCount += item.quantity;
-                      packageGroups[packageId].totalPrice += item.price * item.quantity;
-                    } catch (e) {
-                      // Handle items without custom_data
-                      const packageId = 'single';
-                      if (!packageGroups[packageId]) {
-                        packageGroups[packageId] = {
-                          packageId: 'single',
-                          packageName: 'Individual Items',
-                          packagePrice: 0,
-                          items: [],
-                          totalCount: 0,
-                          totalPrice: 0
-                        };
-                      }
-                      packageGroups[packageId].items.push({ ...item, originalIndex: index });
-                      packageGroups[packageId].totalCount += item.quantity;
-                      packageGroups[packageId].totalPrice += item.price * item.quantity;
-                    }
-                  });
-
-                  return Object.values(packageGroups).map((packageGroup) => (
-                    <div key={packageGroup.packageId} className="mb-6 last:mb-0">
-                      {/* Package Header */}
-                      {parseInt(packageGroup.packageId) > 1 && (
-                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 mb-4 border border-indigo-200">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                </svg>
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-indigo-900">
-                                  {packageGroup.packageName} Package
-                                </h4>
-                                <p className="text-sm text-indigo-600">
-                                  {packageGroup.totalCount} magnets • £{packageGroup.totalPrice.toFixed(2)}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Package Savings */}
-                            {(() => {
-                              const individualPrice = 5.00; // Single magnet price
-                              const totalIndividualPrice = packageGroup.totalCount * individualPrice;
-                              const savings = totalIndividualPrice - packageGroup.totalPrice;
-                              
-                              if (savings > 0) {
-                                return (
-                                  <div className="text-right">
-                                    <div className="text-sm text-gray-500 line-through">
-                                      £{totalIndividualPrice.toFixed(2)}
-                                    </div>
-                                    <div className="text-sm font-medium text-green-600">
-                                      Save £{savings.toFixed(2)}
-                                    </div>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
-                          </div>
-                          
-                          {/* Package Completion Status */}
-                          <div className="mt-3 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-full bg-indigo-200 rounded-full h-2 max-w-32">
-                                <div 
-                                  className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                                  style={{ width: `${(packageGroup.totalCount / parseInt(packageGroup.packageId)) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-xs text-indigo-600 whitespace-nowrap">
-                                {packageGroup.totalCount}/{packageGroup.packageId} complete
-                              </span>
-                            </div>
-                            
-                            {packageGroup.totalCount >= parseInt(packageGroup.packageId) && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                                Complete
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Individual Items in Package */}
-                      <div className="space-y-3">
-                        {packageGroup.items.map((item) => (
-                          <motion.div
-                            key={item.originalIndex}
-                            className="flex items-center py-3 px-4 bg-gray-50 rounded-lg"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, x: -100 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            <div className="flex-shrink-0 w-12 h-12 bg-white rounded-lg overflow-hidden mr-3 border border-gray-200">
-                              {item.image && (
-                                <img
-                                  src={item.image}
-                                  alt={item.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              )}
-                            </div>
-                            
-                            <div className="flex-grow">
-                              <h4 className="text-sm font-medium text-gray-900">{item.name}</h4>
-                              <p className="text-xs text-gray-500">
-                                {(() => {
-                                  try {
-                                    const customData = JSON.parse(item.custom_data || '{}');
-                                    return `${customData.size || '5x5'}cm • ${customData.finish || 'Flexible'}`;
-                                  } catch {
-                                    return 'Custom magnet';
-                                  }
-                                })()}
-                              </p>
-                              <p className="text-sm font-semibold text-gray-900 mt-1">
-                                £{(item.price * item.quantity).toFixed(2)}
-                              </p>
-                            </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              <div className="flex items-center">
-                                <button
-                                  onClick={() => handleQuantityChange(item.originalIndex, item.quantity - 1)}
-                                  disabled={item.quantity <= 1}
-                                  className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                >
-                                  -
-                                </button>
-                                <span className="mx-2 text-sm font-medium w-6 text-center">{item.quantity}</span>
-                                <button
-                                  onClick={() => handleQuantityChange(item.originalIndex, item.quantity + 1)}
-                                  className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 text-xs"
-                                >
-                                  +
-                                </button>
-                              </div>
-                              
-                              <button
-                                onClick={() => handleRemoveItem(item.originalIndex)}
-                                className="text-red-500 hover:text-red-700 p-1"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                      
-                      {/* Package Actions */}
-                      {parseInt(packageGroup.packageId) > 1 && (
-                        <div className="mt-4 flex justify-between items-center">
-                          <button
-                            onClick={() => {
-                              // Remove all items from this package
-                              packageGroup.items.forEach(item => {
-                                handleRemoveItem(item.originalIndex);
-                              });
-                              showToast(`Removed ${packageGroup.packageName} package from cart`, 'success');
-                            }}
-                            className="text-sm text-red-500 hover:text-red-700 flex items-center"
-                          >
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Remove Package
-                          </button>
-                          
-                          {packageGroup.totalCount < parseInt(packageGroup.packageId) && (
-                            <span className="text-sm text-amber-600 flex items-center">
-                              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                              </svg>
-                              {parseInt(packageGroup.packageId) - packageGroup.totalCount} more needed
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ));
-                })()}
-
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-lg font-semibold text-gray-900">Total</span>
-                    <span className="text-2xl font-bold text-gray-900">£{totalPrice.toFixed(2)}</span>
-                  </div>
-                  
-                  {/* Total Savings Display */}
-                  {(() => {
-                    const individualPrice = 5.00;
-                    const totalItems = orderItems.reduce((sum, item) => sum + item.quantity, 0);
-                    const totalIndividualPrice = totalItems * individualPrice;
-                    const totalSavings = totalIndividualPrice - totalPrice;
-                    
-                    if (totalSavings > 0) {
-                      return (
-                        <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-green-800">You save with packages:</span>
-                            <span className="font-semibold text-green-800">£{totalSavings.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                  
-                  <button
-                    onClick={() => router.push('/checkout')}
-                    className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-green-700 transition-colors"
-                  >
-                    Proceed to Checkout
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Product Details */}
             <ProductDetails />
+          </div>
+
+          {/* Right column (on desktop): Design Preview & Upload */}
+          <div className="flex flex-col gap-6 order-1 lg:order-2">
+            {/* Design Preview */}
+            <div className="bg-white rounded-xl shadow-sm border border-pink-200 p-6">
+              <h2 className="text-xl font-semibold text-pink-900 mb-4">Design Preview</h2>
+              <MagnetPreview 
+                imageUrl={currentImage}
+                images={uploadedImages}
+                size={`${selectedSize}cm`}
+                finish={selectedFinish}
+                onThumbnailClick={(index) => {
+                  const selectedImage = uploadedImages[index];
+                  if (selectedImage && selectedImage.url) {
+                    setCurrentImage(selectedImage.url);
+                  }
+                }}
+              />
+              {/* Upload Progress Bar */}
+              {uploadProgress > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between text-sm text-pink-600">
+                    <span>Processing images...</span>
+                    <span>{Math.round(uploadProgress)}%</span>
+                  </div>
+                  <div className="w-full bg-pink-200 rounded-full h-2">
+                    <div 
+                      className="bg-pink-400 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              {/* Package Progress */}
+              {selectedPackage && parseInt(selectedPackage.id) > 1 && (
+                <div className="mt-4 bg-pink-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-pink-900">Package Progress</h3>
+                    <span className="text-xs text-pink-600">
+                      {orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length} / {selectedPackage.id} images
+                    </span>
+                  </div>
+                  <div className="w-full bg-pink-200 rounded-full h-2 mb-2">
+                    <div 
+                      className="bg-pink-400 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length / parseInt(selectedPackage.id)) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-pink-700">
+                    {parseInt(selectedPackage.id) - orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length > 0 
+                      ? `${parseInt(selectedPackage.id) - orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length} more images needed`
+                      : 'Package complete! All images uploaded.'
+                    }
+                  </p>
+                </div>
+              )}
+              {/* Upload Area */}
+              <div className="mt-6">
+                <h3 className="text-base font-medium text-pink-900 mb-2">Upload Your Images</h3>
+                <ImageUploader
+                  onChange={handleFileChange}
+                  maxFiles={selectedPackage?.maxFiles || 1}
+                  disabled={isLoading || (uploadedImages.length >= (selectedPackage?.maxFiles || 1))}
+                  className="w-full border-2 border-dashed border-pink-300 rounded-lg p-6 flex flex-col items-center justify-center bg-pink-50 hover:bg-pink-100 transition cursor-pointer text-center"
+                  style={{ minHeight: 120 }}
+                  helpText={`Drag & drop or click to upload your images. You can select up to ${(selectedPackage?.maxFiles || 1) - uploadedImages.length} more image(s).`}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

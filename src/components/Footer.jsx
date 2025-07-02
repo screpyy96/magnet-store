@@ -10,21 +10,21 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold heading-gradient">MagnetCraft</h3>
+            <h3 className="text-lg font-semibold heading-gradient">My Sweet Magnets</h3>
             <p className="text-gray-600 text-sm">
-              Creating beautiful custom magnets for your home and office. Transform your space with personalized memories.
+              Proudly crafting beautiful, personalised fridge magnets in the UK. Turn your precious memories into keepsakes that last.
             </p>
             <div className="flex space-x-4">
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-pastel-pink hover:text-gold transition-colors">
+              <a href="https://facebook.com/mysweetmagnetsuk" target="_blank" rel="noopener noreferrer" className="text-pastel-pink hover:text-pink-600 transition-colors">
                 <FaFacebook size={20} />
               </a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-pastel-pink hover:text-gold transition-colors">
+              <a href="https://x.com/mysweetmagnetsuk" target="_blank" rel="noopener noreferrer" className="text-pastel-pink hover:text-pink-600 transition-colors">
                 <FaTwitter size={20} />
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-pastel-pink hover:text-gold transition-colors">
+              <a href="https://instagram.com/mysweetmagnetsuk" target="_blank" rel="noopener noreferrer" className="text-pastel-pink hover:text-pink-600 transition-colors">
                 <FaInstagram size={20} />
               </a>
-              <a href="https://pinterest.com" target="_blank" rel="noopener noreferrer" className="text-pastel-pink hover:text-gold transition-colors">
+              <a href="https://pinterest.com/mysweetmagnetsuk" target="_blank" rel="noopener noreferrer" className="text-pastel-pink hover:text-pink-600 transition-colors">
                 <FaPinterest size={20} />
               </a>
             </div>
@@ -74,16 +74,16 @@ export default function Footer() {
           {/* Newsletter */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Stay Updated</h3>
-            <p className="text-gray-600 text-sm mb-4">Subscribe to our newsletter for updates and exclusive offers.</p>
+            <p className="text-gray-600 text-sm mb-4">Join our UK community for exclusive offers, new designs, and 10% off your first order!</p>
             <form className="space-y-2">
               <input
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Your email address"
                 className="input-styled w-full"
               />
               <button
                 type="submit"
-                className="btn-gold w-full"
+                className="bg-gradient-to-r from-pink-400 to-purple-500 hover:from-pink-500 hover:to-purple-600 text-white font-medium py-2 px-4 rounded-full w-full transition-all duration-300"
               >
                 Subscribe
               </button>
@@ -94,8 +94,8 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-gold/30 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-sm text-gray-600">
-              © {new Date().getFullYear()} MagnetCraft. All rights reserved.
+            <p className="text-gray-600 text-sm">
+              &copy; {new Date().getFullYear()} My Sweet Magnets Ltd. Registered in England & Wales. All rights reserved.
             </p>
             <div className="flex space-x-6">
               <Link href="/privacy" className="text-sm text-gray-600 hover:text-gold">Privacy Policy</Link>

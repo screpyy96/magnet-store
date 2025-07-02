@@ -3,25 +3,29 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { FaLeaf, FaHeart, FaAward, FaTruck } from 'react-icons/fa'
 
 export default function AboutPage() {
   return (
     <div className="bg-white">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
+      <div className="relative bg-gradient-to-r from-pink-500 to-purple-600 overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
-            backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-            backgroundSize: '30px 30px'
+            backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'80\' height=\'80\' viewBox=\'0 0 80 80\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.3\'%3E%3Cpath d=\'M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM10 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM30 10c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10S20 25.523 20 20s4.477-10 10-10z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+            backgroundSize: '60px 60px'
           }}></div>
         </div>
-        <div className="max-w-5xl mx-auto py-16 px-4 sm:px-6 lg:px-8 relative">
+        <div className="max-w-7xl mx-auto py-24 px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center">
-            <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-4">
-              Our Story
+            <span className="inline-block px-4 py-1.5 mb-4 text-xs font-semibold tracking-wider text-pink-700 uppercase bg-pink-100 rounded-full">
+              Our Journey
+            </span>
+            <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-6">
+              The Story Behind My Sweet Magnets
             </h1>
-            <p className="text-lg text-indigo-100 max-w-2xl mx-auto">
-              From a kitchen table idea to a thriving family business
+            <p className="text-xl text-pink-100 max-w-3xl mx-auto">
+              Handcrafted in the UK with love, creativity, and a dash of magic
             </p>
           </div>
         </div>
@@ -43,7 +47,7 @@ export default function AboutPage() {
                 {/* Replace with actual image */}
                 <div className="aspect-[4/3] bg-gray-200 relative">
                   <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    Mother & Daughter Photo
+                    <Image src="/images/magnet3.jpeg" alt="Workshop Photo" fill className="object-cover" />
                   </div>
                 </div>
               </div>
@@ -57,28 +61,95 @@ export default function AboutPage() {
             viewport={{ once: true }}
           >
             <h2 className="text-3xl font-bold text-gray-900 mb-6">
-              A Journey Born from Love
+              A Sweet Beginning in Manchester
             </h2>
-            <div className="prose prose-indigo max-w-none">
+            <div className="prose prose-pink max-w-none">
               <p>
-                MagnetCraft began in 2018 as a heartfelt project between Maria and her daughter Sofia. What started as a creative way to preserve their family memories soon blossomed into something much bigger.
+                My Sweet Magnets was born in 2018 from a simple idea between two sisters, Emma and Sophie, in their Manchester flat. What began as a creative way to decorate their fridge with personal photos quickly turned into a passion for creating beautiful, high-quality photo magnets.
               </p>
               <p>
-                After Sofia left for university, Maria found herself looking through old family photos, wishing for a way to keep those precious memories close. She began experimenting with creating photo magnets for their refrigerator, a small reminder of family moments that brought joy every day.
+                "We wanted to find a way to keep our favourite memories close, not just stored away on our phones," says Emma. "There's something special about seeing those moments every day that brings a smile to your face."
               </p>
               <p>
-                When Sofia came home for the holidays, she was amazed by her mother's creations. With Sofia's business background and Maria's artistic talent, they realized they could share this joy with others. Together, they refined the production process in their kitchen, focusing on quality and durability.
+                Starting with just a small printer and a laminator, the sisters perfected their craft, focusing on creating magnets that were not only beautiful but also durable enough to last. Their attention to detail and commitment to quality quickly earned them a loyal following in their local community.
               </p>
               <p>
-                "We wanted to create something that would bring the same warmth to other homes that our magnets brought to ours," says Maria. "Every magnet tells a story, and we wanted to help people display their stories in a beautiful way."
+                Today, My Sweet Magnets has grown into a thriving UK-based business, but we've stayed true to our roots. Every magnet is still designed with the same love and care as those first few we made for our own fridge.
+              </p>
+              <p className="font-medium text-pink-600">
+                "Our mission is simple: to help you turn your precious memories into beautiful, everyday treasures that bring joy to your home."
               </p>
             </div>
           </motion.div>
         </div>
       </div>
 
+      {/* Our Values Section */}
+      <div className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">
+              Our Core Values
+            </h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              What makes My Sweet Magnets special
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                icon: <FaHeart className="h-8 w-8 text-pink-500 mb-4" />,
+                title: 'Made with Love',
+                description: 'Every magnet is crafted with care and attention to detail, just like we would for our own family.'
+              },
+              {
+                icon: <FaLeaf className="h-8 w-8 text-green-500 mb-4" />,
+                title: 'Eco-Friendly',
+                description: 'We use sustainable materials and eco-friendly packaging to minimize our environmental impact.'
+              },
+              {
+                icon: <FaAward className="h-8 w-8 text-yellow-500 mb-4" />,
+                title: 'Premium Quality',
+                description: 'Only the best materials make it into our products, ensuring your memories last a lifetime.'
+              },
+              {
+                icon: <FaTruck className="h-8 w-8 text-blue-500 mb-4" />,
+                title: 'UK Made & Shipped',
+                description: 'Designed, printed, and shipped from our Manchester workshop to your door.'
+              }
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-gray-50 p-8 rounded-xl text-center hover:shadow-lg transition-shadow"
+              >
+                <div className="flex justify-center">
+                  {item.icon}
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {item.title}
+                </h3>
+                <p className="text-gray-600">
+                  {item.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Growth Section */}
-      <div className="bg-gray-50 py-16">
+      <div className="bg-gradient-to-br from-pink-50 to-purple-50 py-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -88,10 +159,10 @@ export default function AboutPage() {
             className="text-center mb-12"
           >
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              From Kitchen Table to Thriving Business
+              Crafting Smiles Across the UK
             </h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Our journey of growth, challenges, and the community that supported us
+              Our commitment to quality, sustainability, and bringing joy to everyday life
             </p>
           </motion.div>
 
@@ -131,7 +202,7 @@ export default function AboutPage() {
                   {/* Replace with actual image */}
                   <div className="aspect-[4/3] bg-gray-200 relative">
                     <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                      Workshop Photo
+                      <Image src="/images/magnet5.jpeg" alt="Workshop Photo" fill className="object-cover" />
                     </div>
                   </div>
                 </div>

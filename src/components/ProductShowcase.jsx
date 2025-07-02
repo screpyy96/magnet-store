@@ -11,7 +11,7 @@ const products = [
     price: '£17.00',
     pricePerUnit: '£2.83 each',
     image: '/images/magnet1.jpeg',
-    description: 'Perfect for small gifts or personal use',
+    description: 'Ideal for small gifts or personal use',
     href: '/custom?package=6',
     tag: 'BEST VALUE',
     sampleImages: [
@@ -26,9 +26,9 @@ const products = [
     price: '£23.00',
     pricePerUnit: '£2.55 each',
     image: '/images/magnet2.jpeg',
-    description: 'Great for families and small collections',
+    description: 'Perfect for families and small collections',
     href: '/custom?package=9',
-    tag: 'POPULAR',
+    tag: 'UK FAVOURITE',
     sampleImages: [
       '/images/magnet1.jpeg',
       '/images/magnet3.jpeg',
@@ -41,7 +41,7 @@ const products = [
     price: '£28.00',
     pricePerUnit: '£2.33 each',
     image: '/images/magnet3.jpeg',
-    description: 'Ideal for large families or multiple designs',
+    description: 'Great for large families or multiple designs',
     href: '/custom?package=12',
     tag: 'BEST SELLER',
     sampleImages: [
@@ -56,7 +56,7 @@ const products = [
     price: '£36.00',
     pricePerUnit: '£2.25 each',
     image: '/images/magnet4.jpeg',
-    description: 'Perfect for businesses and bulk orders',
+    description: 'Ideal for businesses and bulk orders',
     href: '/custom?package=16',
     tag: 'BULK SAVER',
     sampleImages: [
@@ -143,14 +143,15 @@ export default function ProductShowcase() {
   };
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-16 bg-gradient-to-b from-pink-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Our Most Popular Magnets
-          </h2>
+        <div className="text-center mb-12">
+          <span className="inline-block px-4 py-1.5 mb-4 text-xs font-semibold tracking-wider text-pink-700 uppercase bg-pink-100 rounded-full">
+            Made in the UK
+          </span>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Personalised Magnet Collections</h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Discover our best-selling custom magnets, loved by thousands of happy customers
+            Handcrafted in Britain, our custom magnets make perfect keepsakes and gifts. Choose your package and create something special today.
           </p>
         </div>
 
@@ -160,8 +161,8 @@ export default function ProductShowcase() {
             const allImages = [product.image, ...product.sampleImages, ...productUploadedImages];
             
             return (
-              <div key={product.id} className="group relative bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                <div className="w-full overflow-hidden rounded-t-xl bg-white cursor-pointer" onClick={() => openModal(product)}>
+              <div key={product.id} className="group relative bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                <div className="relative h-48 mb-4 rounded-lg overflow-hidden border border-gray-100">
                   <div className="relative h-64 w-full bg-white">
                     <Image
                       src={product.image}
@@ -184,7 +185,7 @@ export default function ProductShowcase() {
                     />
                   </div>
                   {product.tag && (
-                    <div className="absolute top-4 right-4 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full">
+                    <div className="absolute top-3 right-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-md">
                       {product.tag}
                     </div>
                   )}
@@ -195,10 +196,15 @@ export default function ProductShowcase() {
                   </div>
                 </div>
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{product.name}</h3>
-                  <p className="text-2xl font-bold text-indigo-600">{product.price}</p>
-                  <p className="text-sm text-gray-500 mb-3">{product.pricePerUnit}</p>
-                  <p className="text-sm text-gray-600 mb-4">{product.description}</p>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">{product.name}</h3>
+                  <p className="text-gray-600 mb-3 text-sm">{product.description}</p>
+                  <div className="flex items-baseline justify-between mt-4">
+                    <div>
+                      <span className="text-2xl font-bold text-gray-900">{product.price}</span>
+                      <span className="block text-sm text-gray-500">Free UK Delivery</span>
+                    </div>
+                    <span className="text-sm text-gray-500">{product.pricePerUnit}</span>
+                  </div>
                   <div className="space-y-3">
                     <Link
                       href={product.href}
@@ -207,13 +213,10 @@ export default function ProductShowcase() {
                       Order Now
                     </Link>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openModal(product);
-                      }}
-                      className="w-full text-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      onClick={() => openModal(product)}
+                      className="w-full mt-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-medium py-2 px-4 rounded-full hover:opacity-90 transition-all hover:shadow-lg transform hover:-translate-y-0.5"
                     >
-                      Customize ({uploadedImages[product.id]?.length || 0}/{parseInt(product.name.match(/\d+/)[0])})
+                      Create Yours Now
                     </button>
                   </div>
                 </div>
@@ -238,8 +241,8 @@ export default function ProductShowcase() {
 
         {/* Image Modal */}
         {isModalOpen && selectedProduct && (
-          <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border-4 border-pink-100">
               <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeModal}></div>
               <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
               <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
@@ -259,7 +262,7 @@ export default function ProductShowcase() {
                       {selectedProduct.name}
                     </h3>
                     <div className="mt-2">
-                      <p className="text-2xl font-bold text-indigo-600">{selectedProduct.price}</p>
+                      <h3 className="text-2xl font-bold text-gray-900">Create Your {selectedProduct.name}</h3>
                       <p className="text-sm text-gray-500">{selectedProduct.pricePerUnit}</p>
                       <p className="text-gray-600 mt-2">{selectedProduct.description}</p>
                     </div>
@@ -300,9 +303,7 @@ export default function ProductShowcase() {
                       }}
                       className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 focus:outline-none"
                     >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                      </svg>
+                      <FiChevronLeft className="w-6 h-6" aria-hidden="true" />
                     </button>
                     <button
                       onClick={(e) => {
@@ -311,9 +312,7 @@ export default function ProductShowcase() {
                       }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 focus:outline-none"
                     >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                      </svg>
+                      <FiChevronRight className="w-6 h-6" aria-hidden="true" />
                     </button>
                     
                     <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
@@ -337,52 +336,34 @@ export default function ProductShowcase() {
                       <label className="block text-sm font-medium text-gray-700">
                         Upload your images
                       </label>
-                      <span className="text-sm text-gray-500">
-                        {uploadedImages[selectedProduct.id]?.length || 0}/{selectedProduct.name.match(/\d+/)[0]} images
-                      </span>
+                      <p className="text-gray-600 mb-6">
+                        Upload {selectedProduct.name.match(/\d+/)[0]} photos to create your personalised magnets. All images are printed with our premium UK-made quality and delivered to your door.
+                      </p>
                     </div>
                     {uploadError && (
                       <div className="text-red-600 text-sm mb-2">{uploadError}</div>
                     )}
                     <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                      <div className="space-y-1 text-center">
-                        <svg
-                          className="mx-auto h-12 w-12 text-gray-400"
-                          stroke="currentColor"
-                          fill="none"
-                          viewBox="0 0 48 48"
-                          aria-hidden="true"
-                        >
-                          <path
-                            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                            strokeWidth={2}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        <div className="flex text-sm text-gray-600">
-                          <label
-                            htmlFor={`file-upload-${selectedProduct.id}`}
-                            className={`relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none ${
-                              (uploadedImages[selectedProduct.id]?.length || 0) >= parseInt(selectedProduct.name.match(/\d+/)[0]) ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                          >
-                            <span>Upload files</span>
-                            <input
-                              id={`file-upload-${selectedProduct.id}`}
-                              name="file-upload"
-                              type="file"
-                              className="sr-only"
-                              multiple
-                              accept="image/*"
-                              onChange={(e) => handleImageUpload(e, selectedProduct.id, parseInt(selectedProduct.name.match(/\d+/)[0]))}
-                              disabled={(uploadedImages[selectedProduct.id]?.length || 0) >= parseInt(selectedProduct.name.match(/\d+/)[0])}
-                            />
-                          </label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-pink-500 transition-all hover:bg-pink-50"
+                        onClick={() => document.getElementById('file-upload').click()}>
+                        <input
+                          id="file-upload"
+                          name="file-upload"
+                          type="file"
+                          className="sr-only"
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, selectedProduct.id, parseInt(selectedProduct.name.match(/\d+/)[0]))}
+                        />
+                        <FiUpload className="mx-auto h-12 w-12 text-pink-400" />
+                        <div className="mt-4 flex text-sm text-gray-600 justify-center">
+                          <span className="relative cursor-pointer rounded-md font-medium text-pink-600 hover:text-pink-500">
+                            <span>Upload your photos</span>
+                          </span>
                           <p className="pl-1">or drag and drop</p>
                         </div>
-                        <p className="text-xs text-gray-500">
-                          PNG, JPG, GIF up to 10MB
+                        <p className="text-xs text-gray-500 mt-2">
+                          We accept PNG, JPG up to 10MB per file
                         </p>
                       </div>
                     </div>
@@ -411,16 +392,11 @@ export default function ProductShowcase() {
                 
                 <div className="mt-5 sm:mt-6">
                   <button
-                    type="button"
                     onClick={(e) => handleOrderNow(e, selectedProduct)}
-                    className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                      (uploadedImages[selectedProduct.id]?.length || 0) < parseInt(selectedProduct.name.match(/\d+/)[0])
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-indigo-600 hover:bg-indigo-700'
-                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
-                    disabled={(uploadedImages[selectedProduct.id]?.length || 0) < parseInt(selectedProduct.name.match(/\d+/)[0])}
+                    className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white font-medium py-3 px-6 rounded-full hover:opacity-90 transition-all hover:shadow-lg transform hover:-translate-y-0.5 mt-6"
+                    disabled={!uploadedImages[selectedProduct.id] || uploadedImages[selectedProduct.id].length === 0}
                   >
-                    {uploadError ? 'Complete Your Order' : 'Order Now'}
+                    Continue to Secure Checkout
                   </button>
                 </div>
               </div>

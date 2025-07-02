@@ -21,20 +21,17 @@ export default function Hero() {
       <div className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-center text-white sm:px-6 lg:px-8 py-16 md:py-0">
         <div className="max-w-4xl mx-auto">
           <div className="inline-block mb-4 md:mb-6 px-4 py-1.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-            <span className="text-sm font-medium text-white/90">
-              🏴󠁧󠁢󠁥󠁮󠁧󠁿 Handcrafted in the UK
+            <span className="text-sm font-semibold text-white drop-shadow-md [text-shadow:_0_1px_2px_rgba(0,0,0,0.8)]">
+              🏴󠁧󠁢󠁥󠁮󠁧󠁿 Proudly Handcrafted in the UK
             </span>
           </div>
           
-          <h1 className="text-3xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl mb-4 sm:mb-6 leading-tight">
-            Turn Your Memories Into <br className="hidden sm:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-pink-400">
-              Stunning Magnets
-            </span>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl mb-4 sm:mb-6 leading-tight drop-shadow-lg [text-shadow:_0_2px_8px_rgba(0,0,0,0.5)]">
+            Cherish Every Memory with My Sweet Magnets
           </h1>
           
-          <p className="mx-auto mb-6 sm:mb-8 text-base sm:text-xl md:text-2xl max-w-2xl text-white/90 leading-relaxed px-2">
-            Create custom fridge magnets from your favourite photos. Perfect for home decoration, unique gifts, or keeping special memories close.
+          <p className="mx-auto mb-6 sm:mb-8 text-base sm:text-xl md:text-2xl max-w-2xl text-white leading-relaxed px-2 drop-shadow-lg [text-shadow:_0_2px_4px_rgba(0,0,0,0.7)] font-medium">
+            Turn your favourite moments into beautiful, high-quality fridge magnets. Handmade in the UK with love.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -44,7 +41,7 @@ export default function Hero() {
             >
               <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
               <span className="relative flex items-center">
-                Browse Our Collection
+                Shop Now
                 <svg className="ml-2 -mr-1 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
@@ -56,15 +53,15 @@ export default function Hero() {
             >
               <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
               <span className="relative flex items-center">
-                🎨 Design Your Magnet
+                Create Yours
                 <svg className="ml-2 -mr-1 w-5 h-5 group-hover:rotate-45 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </span>
             </Link>
           </div>
-          <p className="mt-4 text-sm text-white/80">
-            ⚡ <span className="font-medium">Limited Time:</span> Get 15% off your first order!
+          <p className="mt-4 text-sm font-medium text-white drop-shadow-md [text-shadow:_0_1px_2px_rgba(0,0,0,0.8)]">
+            ⚡ <span className="font-semibold">UK Customers:</span> Free delivery on orders over £30!
           </p>
         </div>
 
@@ -74,13 +71,13 @@ export default function Hero() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
               {[
                 { icon: '🚚', text: 'UK Next Day Delivery' },
-                { icon: '🎨', text: '100% Customisable' },
-                { icon: '✨', text: 'Premium Quality' },
-                { icon: '💯', text: 'Satisfaction Guaranteed' }
+                { icon: '🎨', text: 'Fully Customisable' },
+                { icon: '✨', text: 'Premium British Quality' },
+                { icon: '💝', text: 'Perfect Personalised Gifts' }
               ].map((item, index) => (
                 <div key={index} className="flex items-center justify-center gap-1 sm:gap-2 bg-white/10 backdrop-blur-sm px-2 sm:px-4 py-2 sm:py-3 rounded-lg border border-white/20">
                   <span className="text-base sm:text-xl">{item.icon}</span>
-                  <span className="text-xs sm:text-sm font-medium">{item.text}</span>
+                  <span className="text-xs sm:text-sm font-semibold text-white drop-shadow-md [text-shadow:_0_1px_2px_rgba(0,0,0,0.8)]">{item.text}</span>
                 </div>
               ))}
             </div>

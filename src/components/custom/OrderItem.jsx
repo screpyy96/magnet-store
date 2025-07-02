@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
+import { getCartItemImage } from '@/utils/localStorage'
 
 export default function OrderItem({ item, index, onQuantityChange, onRemove }) {
   const [imageSrc, setImageSrc] = useState('')
@@ -12,9 +13,10 @@ export default function OrderItem({ item, index, onQuantityChange, onRemove }) {
     // Reset error state when item changes
     setHasError(false)
     setImageLoaded(false)
-    // Set initial image source
-    if (item?.image || item?.fileData) {
-      setImageSrc(item.image || item.fileData)
+    // Set initial image source using the utility function
+    const imageUrl = getCartItemImage(item);
+    if (imageUrl) {
+      setImageSrc(imageUrl)
     } else {
       setImageSrc('') // Explicitly set to empty string
       setHasError(true)
@@ -30,7 +32,7 @@ export default function OrderItem({ item, index, onQuantityChange, onRemove }) {
   }
 
   // If we have an error or no image, show placeholder
-  if (hasError || !(item?.image || item?.fileData)) {
+  if (hasError || !getCartItemImage(item)) {
     return (
       <motion.div
         className="flex items-center py-4 border-t border-gray-200 first:border-t-0"
