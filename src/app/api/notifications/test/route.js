@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import webpush from 'web-push';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    // Create Supabase client
+    const supabase = createClient();
     
     // Verifică dacă utilizatorul este autentificat și admin
     const { data: { session } } = await supabase.auth.getSession();

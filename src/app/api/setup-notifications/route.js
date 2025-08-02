@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    // Create Supabase client
+    const supabase = createClient();
     
     // Verifică dacă utilizatorul este admin
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();

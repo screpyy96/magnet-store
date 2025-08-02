@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { stripe } from '@/lib/stripe-server'
 import webpush from 'web-push'
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 // Verifică dacă cheile VAPID sunt configurate
 if (process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
@@ -67,11 +67,11 @@ export async function POST(request) {
     const allCookies = cookieStore.getAll()
     console.log('Available cookies:', allCookies.map(c => ({ name: c.name, path: c.path })))
     
-    // Create Supabase client with explicit cookie handling
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    // Create Supabase client
+    const supabase = createClient()
     
     // Create a service role client for operations that need to bypass RLS
-    const serviceRoleClient = createClient(
+    const serviceRoleClient = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SERVICE_ROLE_KEY,
       {
