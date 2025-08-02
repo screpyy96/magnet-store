@@ -1,19 +1,24 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/client';
 import { useRouter, usePathname } from 'next/navigation'
 import { safeLocalStorage } from '@/utils/localStorage'
+
+// Create supabase client instance
+const supabase = createClient()
 
 // Crearea contextului
 export const AuthContext = createContext({
   user: null,
   isLoading: true,
+  signUp: async () => {},
   signIn: async () => {},
   signOut: async () => {},
   signInWithGoogle: async () => {},
   refreshSession: async () => {},
-  supabase: null,
+  createProfileIfNotExists: async () => {},
+  supabase: supabase,
   setRedirectAfterLogin: () => {},
   getAndClearRedirectUrl: () => {},
 });
@@ -148,6 +153,29 @@ export function AuthProvider({ children }) {
     return null
   }
   
+  const signUp = async (credentials) => {
+    try {
+      const { data, error } = await supabase.auth.signUp(credentials)
+      
+      if (error) {
+        throw error
+      }
+      
+      // If user is confirmed immediately (no email confirmation needed)
+      if (data?.user && data?.session) {
+        setUser(data.user)
+        // Profile is created automatically by the trigger, but we can check admin status
+        if (data.user) {
+          checkAdminStatus(data.user.id)
+        }
+      }
+      
+      return { success: true, data }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  }
+  
   const signIn = async (credentials, redirectUrl = '/') => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword(credentials)
@@ -188,12 +216,16 @@ export function AuthProvider({ children }) {
   
   const signInWithGoogle = async (redirectUrl = '/') => {
     try {
-      const fullRedirectUrl = `${window.location.origin}/auth/callback?redirect_to=${encodeURIComponent(redirectUrl)}`
+      // Use the correct redirect URL format for Supabase OAuth
+      const fullRedirectUrl = `${window.location.origin}/auth/callback`
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: fullRedirectUrl
+          redirectTo: fullRedirectUrl,
+          queryParams: {
+            redirect_to: redirectUrl
+          }
         }
       })
       
@@ -219,7 +251,8 @@ export function AuthProvider({ children }) {
       return data;
     } catch (error) {
       console.error('Error creating profile:', error);
-      throw error;
+      // Don't throw error here, as the trigger might have already created the profile
+      return null;
     }
   };
   
@@ -255,10 +288,12 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user,
       isLoading: loading,
+      signUp,
       signIn,
       signOut,
       signInWithGoogle,
       refreshSession,
+      createProfileIfNotExists,
       supabase,
       isAdmin,
       setRedirectAfterLogin,

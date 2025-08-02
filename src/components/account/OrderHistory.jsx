@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -20,7 +20,7 @@ export default function OrderHistory() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const supabase = createClientComponentClient();
+      const supabase = createClient();
       
       // Obține comenzile utilizatorului
       const { data: ordersData, error: ordersError } = await supabase

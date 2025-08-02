@@ -108,7 +108,7 @@ export async function POST(request) {
     try {
       const { data, error } = await supabase
         .storage
-        .from('magnet_images')
+        .from('magnet-images')
         .upload(fileName, imageBuffer, {
           contentType: 'image/jpeg',
           cacheControl: '3600',
@@ -126,7 +126,7 @@ export async function POST(request) {
       // Obținem URL-ul public
       const { data: urlData } = supabase
         .storage
-        .from('magnet_images')
+        .from('magnet-images')
         .getPublicUrl(fileName)
       
       if (!urlData || !urlData.publicUrl) {

@@ -19,7 +19,11 @@ export default function ImageUploader({ onFileChange, maxFiles = 10 }) {
       ? acceptedFiles.slice(0, maxFiles) 
       : acceptedFiles;
       
-    onFileChange({ target: { files: filesToProcess } });
+    if (onFileChange && typeof onFileChange === 'function') {
+      onFileChange({ target: { files: filesToProcess } });
+    } else {
+      console.warn('onFileChange prop is not provided or is not a function');
+    }
   }, [onFileChange, maxFiles]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

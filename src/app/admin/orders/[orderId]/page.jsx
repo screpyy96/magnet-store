@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import React from 'react'
 import Link from 'next/link'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/utils/supabase/client'
 
 export default function AdminOrderPage({ params }) {
   const unwrappedParams = React.use(params);
@@ -19,7 +19,7 @@ export default function AdminOrderPage({ params }) {
   const [statusUpdateSuccess, setStatusUpdateSuccess] = useState(false)
   const [redirectAttempted, setRedirectAttempted] = useState(false)
   const [previewImage, setPreviewImage] = useState(null)
-  const supabaseClient = createClientComponentClient()
+  const supabaseClient = createClient()
 
   useEffect(() => {
     // If contextIsAdmin is already true, we can load the order details directly

@@ -47,7 +47,7 @@ export default function AboutPage() {
                 {/* Replace with actual image */}
                 <div className="aspect-[4/3] bg-gray-200 relative">
                   <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    <Image src="/images/magnet3.jpeg" alt="Workshop Photo" fill className="object-cover" />
+                    <Image src="/images/magnet3.jpeg" alt="Workshop Photo" fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
                   </div>
                 </div>
               </div>
@@ -202,7 +202,7 @@ export default function AboutPage() {
                   {/* Replace with actual image */}
                   <div className="aspect-[4/3] bg-gray-200 relative">
                     <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                      <Image src="/images/magnet5.jpeg" alt="Workshop Photo" fill className="object-cover" />
+                      <Image src="/images/magnet5.jpeg" alt="Workshop Photo" fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
                     </div>
                   </div>
                 </div>

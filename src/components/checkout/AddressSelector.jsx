@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/utils/supabase/client'
 
 export default function AddressSelector({ selectedAddress, onAddressSelect }) {
   const { user, supabase } = useAuth()
@@ -84,7 +84,7 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }) {
       console.log('Current user:', user);
 
       // Folosim createClient pentru a obține un client Supabase cu sesiunea actuală
-      const supabase = createClientComponentClient();
+      const supabase = createClient();
 
       // Mai întâi, setăm toate adresele existente ca non-default
       const { error: updateError } = await supabase

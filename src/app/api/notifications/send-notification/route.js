@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 import webpush from 'web-push';
 
@@ -29,7 +29,7 @@ export async function POST(request) {
 
     // 4. Get Supabase client
     const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = createClient(cookieStore);
 
     // 5. Get all subscriptions from database
     const { data: subscriptions, error } = await supabase

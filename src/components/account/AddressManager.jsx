@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/client';
+
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AddressManager() {
-  const { user } = useAuth();
+  const { user, supabase } = useAuth();
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -31,7 +32,7 @@ export default function AddressManager() {
   const fetchAddresses = async () => {
     try {
       setLoading(true);
-      const supabase = createClientComponentClient();
+      const supabase = createClient();
       
       const { data, error } = await supabase
         .from('shipping_addresses')
@@ -62,7 +63,7 @@ export default function AddressManager() {
     e.preventDefault();
     
     try {
-      const supabase = createClientComponentClient();
+      const supabase = createClient();
       
       // Verificați utilizatorul curent
       console.log('Current user when saving:', user);
@@ -75,9 +76,13 @@ export default function AddressManager() {
       
       console.log('Saving address data:', addressData);
       
-      // Logați detalii despre sesiune înainte de a încerca inserarea
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log('Current session:', sessionData);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated. Please log in.');
+      }
+
+      // Asigură-te că clientul Supabase folosește token-ul actualizat
+      supabase.auth.setSession(session);
       
       // Dacă este bifat ca adresă implicită, setează toate celelalte ca non-implicite
       if (formData.is_default) {
@@ -129,7 +134,7 @@ export default function AddressManager() {
     }
     
     try {
-      const supabase = createClientComponentClient();
+      const supabase = createClient();
       
       const { error } = await supabase
         .from('shipping_addresses')
@@ -149,7 +154,7 @@ export default function AddressManager() {
 
   const handleSetDefault = async (id) => {
     try {
-      const supabase = createClientComponentClient();
+      const supabase = createClient();
       
       // Mai întâi setăm toate adresele ca non-implicite
       await supabase

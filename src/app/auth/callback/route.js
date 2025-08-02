@@ -13,6 +13,7 @@ export async function GET(request) {
     const redirectTo = 
       requestUrl.searchParams.get('redirect_to') || 
       requestUrl.searchParams.get('redirect') || 
+      requestUrl.searchParams.get('state') || 
       '/'
     
     console.log('Auth callback received:', {

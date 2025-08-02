@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 
 export async function GET() {
@@ -10,7 +10,7 @@ export async function GET() {
     console.log('Auth check - available cookies:', allCookies.map(c => ({ name: c.name })))
     
     // Create Supabase client with awaited cookies
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = createClient(cookieStore)
     
     // Check authentication status
     const { data, error } = await supabase.auth.getSession()

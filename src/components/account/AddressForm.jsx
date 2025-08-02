@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/utils/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AddressForm({ existingAddress = null, onSuccess, onCancel }) {
@@ -55,7 +55,7 @@ export default function AddressForm({ existingAddress = null, onSuccess, onCance
       
       console.log('Submitting address data:', addressData);
       
-      const supabase = createClientComponentClient();
+      const supabase = createClient();
       
       // Dacă "is_default" este true, setează toate celelalte adrese ca non-default
       if (formData.is_default) {

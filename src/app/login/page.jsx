@@ -99,7 +99,7 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-pink-200 px-8 py-6 mx-auto">
         <div>
-          <Image src="/logo.png" alt="My Sweet Magnets Logo" width={64} height={64} className="mx-auto mb-4" />
+          <Image src="/logo.png" alt="My Sweet Magnets Logo" width={64} height={64} style={{ width: '64px', height: 'auto' }} className="mx-auto mb-4" />
           <h2 className="text-center font-bold text-pink-700 font-nunito text-lg on-mobile:text-2xl mb-2">Sign in to your account</h2>
           <p className="mt-2 text-center text-sm text-gray-600 mb-4">
             Or{' '}

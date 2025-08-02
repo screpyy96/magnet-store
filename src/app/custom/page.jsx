@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
 import { useDispatch, useSelector } from 'react-redux'
 import { addItem, removeItem, updateQuantity, selectCartItems, clearCart } from '@/store/slices/cartSlice'
 import ImageUploader from '@/components/custom/ImageUploader'
@@ -16,8 +15,6 @@ import DeliveryInfo from '@/components/custom/DeliveryInfo'
 import { useToast } from '@/contexts/ToastContext'
 
 import { safeLocalStorage } from '@/utils/localStorage'
-import { ProductSchema } from '@/components/SEO/ProductSchema'
-// Storage functions will be used during checkout, not here
 
 // Package configurations for bulk orders
 const PACKAGES = [
@@ -85,7 +82,7 @@ export default function Custom() {
   const orderItems = useSelector(selectCartItems) || [];
   const totalPrice = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   
-  // Get uploaded images directly from Redux store - SAME logic as Cart component
+  // Get uploaded images with restoration from localStorage
   const uploadedImages = orderItems
     .filter(item => {
       try {
@@ -105,8 +102,25 @@ export default function Custom() {
         fileDataStart: item.fileData?.substring(0, 100) || 'No fileData'
       });
       
-      // Use EXACT same logic as Cart component
-      const imageUrl = item.image || item.fileData;
+      // Try to get image from multiple sources
+      let imageUrl = item.image || item.fileData || item.image_url;
+      
+      // If no image in Redux, try to restore from localStorage
+      if (!imageUrl && item.custom_data) {
+        try {
+          const customData = JSON.parse(item.custom_data);
+          if (customData.imageTimestamp) {
+            const customImages = safeLocalStorage.getJSON('customMagnetImages') || [];
+            const matchingImage = customImages.find(img => img.timestamp === customData.imageTimestamp);
+            if (matchingImage) {
+              imageUrl = matchingImage.thumbnail;
+              console.log(`🔄 Restored image from localStorage for ${item.name}`);
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to restore image from localStorage:', e);
+        }
+      }
       
       console.log(`📸 Final image URL for ${item.name}:`, {
         selected: imageUrl ? 'Found' : 'Missing',
@@ -135,42 +149,84 @@ export default function Custom() {
 
   // Handle package selection
   const handlePackageSelect = useCallback((pkg) => {
-    const previousPackage = selectedPackage;
-    setSelectedPackage(pkg);
-    
-    // Clear existing items if changing package type
-    if (previousPackage && pkg.id !== previousPackage.id) {
-      // Only clear items that are part of the previous package
-      const itemsToKeep = orderItems.filter(item => {
-        try {
-          const itemData = item.custom_data ? JSON.parse(item.custom_data) : null;
-          // Keep items that are not part of any package or are single magnets
-          return !itemData || itemData.packageId === '1' || itemData.packageId !== previousPackage.id;
-        } catch (e) {
-          return true;
-        }
-      });
+    setSelectedPackage(prevPackage => {
+      const previousPackage = prevPackage;
       
-      // Clear the cart and add back the items we want to keep
-      dispatch(clearCart());
-      itemsToKeep.forEach(item => {
-        // Re-add the item with its original quantity
-        dispatch(addItem({...item, quantity: item.quantity || 1}));
-      });
+      // Clear existing items if changing package type
+      if (previousPackage && pkg.id !== previousPackage.id) {
+        // Only clear items that are part of the previous package
+        const itemsToKeep = orderItems.filter(item => {
+          try {
+            const itemData = item.custom_data ? JSON.parse(item.custom_data) : null;
+            // Keep items that are not part of any package or are single magnets
+            return !itemData || itemData.packageId === '1' || itemData.packageId !== previousPackage.id;
+          } catch (e) {
+            return true;
+          }
+        });
+        
+        // Clear the cart and add back the items we want to keep
+        dispatch(clearCart());
+        itemsToKeep.forEach(item => {
+          // Re-add the item with its original quantity
+          dispatch(addItem({...item, quantity: item.quantity || 1}));
+        });
+        
+        setCurrentImage(null);
+      }
       
-      setCurrentImage(null);
-    }
-  }, [selectedPackage, orderItems, dispatch]);
+      return pkg;
+    });
+  }, [orderItems, dispatch]);
 
   // Initialize selected package from URL or default
   useEffect(() => {
     const pkg = getInitialPackage();
-    handlePackageSelect(pkg);
-  }, [handlePackageSelect]);
+    setSelectedPackage(pkg);
+  }, []);
 
   // Handle client-side operations after mount
   useEffect(() => {
     if (!isClient) return;
+
+    // Restore images from localStorage if Redux store is empty
+    if (uploadedImages.length === 0) {
+      try {
+        const customImages = safeLocalStorage.getJSON('customMagnetImages') || [];
+        if (customImages.length > 0) {
+          console.log('🔄 Restoring images from localStorage...');
+          
+          // Add each image back to cart
+          customImages.forEach((imageData, index) => {
+            const magnetItem = {
+              id: `magnet-restored-${imageData.timestamp}`,
+              name: `${imageData.name || `Image ${index + 1}`} (${imageData.size}cm)`,
+              price: selectedPackage?.pricePerUnit || 5,
+              quantity: 1,
+              image_url: imageData.thumbnail,
+              image: imageData.thumbnail,
+              fileData: imageData.thumbnail,
+              custom_data: JSON.stringify({
+                type: 'custom_magnet',
+                size: imageData.size,
+                finish: imageData.finish,
+                packageId: selectedPackage?.id || '1',
+                packageName: selectedPackage?.name || '1 Custom Magnet',
+                packagePrice: selectedPackage?.price || 5,
+                pricePerUnit: selectedPackage?.pricePerUnit || 5,
+                imageTimestamp: imageData.timestamp
+              })
+            };
+            
+            dispatch(addItem(magnetItem));
+          });
+          
+          showToast(`Restored ${customImages.length} image(s) from your previous session`, 'success');
+        }
+      } catch (e) {
+        console.warn('Failed to restore images from localStorage:', e);
+      }
+    }
 
     // Set current image from most recent cart item if not already set
     if (!currentImage && uploadedImages.length > 0) {
@@ -682,27 +738,115 @@ export default function Custom() {
                   <p className="text-xs text-pink-700">
                     {parseInt(selectedPackage.id) - orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length > 0 
                       ? `${parseInt(selectedPackage.id) - orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length} more images needed`
-                      : 'Package complete! All images uploaded.'
+                      : '✅ All images uploaded! Click "Proceed to Checkout" below.'
                     }
                   </p>
                 </div>
               )}
-              {/* Upload Area */}
-              <div className="mt-6">
-                <h3 className="text-base font-medium text-pink-900 mb-2">Upload Your Images</h3>
-                <ImageUploader
-                  onChange={handleFileChange}
-                  maxFiles={selectedPackage?.maxFiles || 1}
-                  disabled={isLoading || (uploadedImages.length >= (selectedPackage?.maxFiles || 1))}
-                  className="w-full border-2 border-dashed border-pink-300 rounded-lg p-6 flex flex-col items-center justify-center bg-pink-50 hover:bg-pink-100 transition cursor-pointer text-center"
-                  style={{ minHeight: 120 }}
-                  helpText={`Drag & drop or click to upload your images. You can select up to ${(selectedPackage?.maxFiles || 1) - uploadedImages.length} more image(s).`}
-                />
+              
+              {/* Checkout Button - Show when package is complete */}
+              {selectedPackage && parseInt(selectedPackage.id) > 1 && 
+               orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length >= parseInt(selectedPackage.id) && (
+                <div className="mt-4 bg-green-50 rounded-lg p-4 border border-green-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center">
+                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <h3 className="text-sm font-medium text-green-900">Package Complete!</h3>
+                    </div>
+                    <span className="text-xs text-green-600 font-medium">
+                      ${selectedPackage.price.toFixed(2)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-green-700 mb-3">
+                    All {selectedPackage.id} images uploaded successfully. Ready to proceed to checkout!
+                  </p>
+                                      <button
+                      onClick={() => {
+                        if (!user) {
+                          showToast('Please log in to continue with your order', 'warning');
+                          router.push('/login?redirect=/custom');
+                          return;
+                        }
+                        router.push('/checkout');
+                      }}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                    >
+                    <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m6 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+                    </svg>
+                    Proceed to Checkout
+                  </button>
+                </div>
+              )}
+              {/* Upload Area - Only show if package is not complete */}
+              {(!selectedPackage || 
+                orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length < parseInt(selectedPackage.id)) && (
+                <div className="mt-6">
+                  <h3 className="text-base font-medium text-pink-900 mb-2">Upload Your Images</h3>
+                  <ImageUploader
+                    onFileChange={handleFileChange}
+                    maxFiles={selectedPackage?.maxFiles || 1}
+                  />
+                </div>
+              )}
+              
+              {/* Package Complete Message */}
+              {selectedPackage && 
+               orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length >= parseInt(selectedPackage.id) && (
+                <div className="mt-4 bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <div className="flex items-center">
+                    <svg className="h-5 w-5 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-xs text-blue-700">
+                      Upload disabled - Package is complete. You can still edit your images above.
+                    </p>
+                  </div>
+                </div>
+              )}
+                
+                {/* Checkout Button for Single Image Packages */}
+                {selectedPackage && parseInt(selectedPackage.id) === 1 && 
+                 orderItems.filter(item => item.custom_data && JSON.parse(item.custom_data).type === 'custom_magnet').length >= 1 && (
+                  <div className="mt-4 bg-green-50 rounded-lg p-4 border border-green-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center">
+                        <svg className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <h3 className="text-sm font-medium text-green-900">Image Uploaded!</h3>
+                      </div>
+                      <span className="text-xs text-green-600 font-medium">
+                        ${selectedPackage.price.toFixed(2)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-green-700 mb-3">
+                      Your custom magnet is ready! Proceed to checkout to complete your order.
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (!user) {
+                          showToast('Please log in to continue with your order', 'warning');
+                          router.push('/login?redirect=/custom');
+                          return;
+                        }
+                        router.push('/checkout');
+                      }}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                    >
+                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m6 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+                      </svg>
+                      Proceed to Checkout
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
-      </div>
 
       {/* Image Editor Modal */}
       {currentEditingFile && (
