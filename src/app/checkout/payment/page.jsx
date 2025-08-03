@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDispatch } from 'react-redux'
-import { clearCart } from '@/store/cartSlice'
+import { clearCart } from '@/store/slices/cartSlice'
 import React from 'react'
 
 // Loading component for Suspense
