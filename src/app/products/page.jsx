@@ -33,7 +33,7 @@ export default function ProductsPage() {
       originalPrice: '30.00',
       link: '/custom?qty=6',
       category: 'bundle',
-      badge: 'Best Value',
+      badge: 'Popular Choice',
       savings: '43%'
     },
     {
@@ -46,7 +46,7 @@ export default function ProductsPage() {
       originalPrice: '45.00',
       link: '/custom?qty=9',
       category: 'bundle',
-      badge: 'Popular Choice',
+      badge: 'Best Value',
       savings: '49%'
     },
     {

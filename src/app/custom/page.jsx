@@ -37,7 +37,7 @@ const PACKAGES = [
     pricePerUnit: 2.83,
     maxFiles: 6,
     description: 'Perfect for small gifts or personal use',
-    tag: 'BEST VALUE'
+    tag: 'POPULAR'
   },
   {
     id: '9',
@@ -46,7 +46,7 @@ const PACKAGES = [
     pricePerUnit: 2.55,
     maxFiles: 9,
     description: 'Great for families and small collections',
-    tag: 'POPULAR'
+    tag: 'BEST VALUE'
   },
   {
     id: '12',
@@ -56,6 +56,15 @@ const PACKAGES = [
     maxFiles: 12,
     description: 'Ideal for large families or multiple designs',
     tag: 'BEST SELLER'
+  },
+  {
+    id: '16',
+    name: '16 Custom Magnets',
+    price: 36.00,
+    pricePerUnit: 2.25,
+    maxFiles: 16,
+    description: 'Ideal for businesses and bulk orders',
+    tag: 'BULK SAVER'
   }
 ];
 
@@ -63,9 +72,16 @@ const PACKAGES = [
 const getInitialPackage = () => {
   if (typeof window === 'undefined') return PACKAGES[1]; // Default to 6 pack
   const params = new URLSearchParams(window.location.search);
-  const pkgId = params.get('package') || '6';
-  const foundPackage = PACKAGES.find(pkg => pkg.id === pkgId) || PACKAGES[1];
-  return foundPackage;
+  const pkgId = params.get('package');
+  
+  // Only select package if it's explicitly provided in URL
+  if (pkgId) {
+    const foundPackage = PACKAGES.find(pkg => pkg.id === pkgId);
+    if (foundPackage) return foundPackage;
+  }
+  
+  // If no valid package in URL, return null to show no selection
+  return null;
 };
 
 export default function Custom() {
@@ -77,7 +93,7 @@ export default function Custom() {
   // State
   const [selectedPackage, setSelectedPackage] = useState(getInitialPackage());
   const [selectedSize, setSelectedSize] = useState('5x5');
-  const [selectedFinish, setSelectedFinish] = useState('flexible');
+  const [selectedFinish, setSelectedFinish] = useState('rigid');
   const [currentEditingFile, setCurrentEditingFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -97,19 +113,19 @@ export default function Custom() {
   
   // Load saved images from localStorage on mount
   useEffect(() => {
+    if (!selectedPackage) return;
     const savedImages = safeLocalStorage.getJSON(`package_${selectedPackage.id}_images`) || [];
     if (savedImages.length > 0) {
       setPackageImages(savedImages);
       showToast(`Restored ${savedImages.length} images from previous session`, 'info');
     }
-  }, [selectedPackage.id]);
+  }, [selectedPackage?.id]);
   
   // Save images to localStorage when they change
   useEffect(() => {
-    if (packageImages.length > 0) {
-      safeLocalStorage.setJSON(`package_${selectedPackage.id}_images`, packageImages);
-    }
-  }, [packageImages, selectedPackage.id]);
+    if (!selectedPackage || packageImages.length === 0) return;
+    safeLocalStorage.setJSON(`package_${selectedPackage.id}_images`, packageImages);
+  }, [packageImages, selectedPackage?.id]);
   
   // Handle package selection
   const handlePackageSelect = useCallback((pkg) => {
@@ -128,6 +144,11 @@ export default function Custom() {
   
   // Handle file selection
   const handleFileChange = (e) => {
+    if (!selectedPackage) {
+      showToast('Please select a package first', 'warning');
+      return;
+    }
+    
     const files = Array.from(e.target.files);
     
     if (files.length === 0) return;
@@ -211,6 +232,11 @@ export default function Custom() {
   
   // Add package to cart
   const handleAddToCart = () => {
+    if (!selectedPackage) {
+      showToast('Please select a package first', 'warning');
+      return;
+    }
+    
     if (packageImages.length !== selectedPackage.maxFiles) {
       showToast(`Please add all ${selectedPackage.maxFiles} images before proceeding`, 'warning');
       return;
@@ -402,17 +428,23 @@ export default function Custom() {
               )}
               
               {/* Package Progress */}
-              <div className="mt-4">
-                <PackageProgress 
-                  selectedPackage={selectedPackage}
-                  currentPackageImages={packageImages}
-                  imagesForCurrentPackageCount={packageImages.length}
-                />
-              </div>
+              {selectedPackage && (
+                <div className="mt-4">
+                  <PackageProgress 
+                    selectedPackage={selectedPackage}
+                    currentPackageImages={packageImages}
+                    imagesForCurrentPackageCount={packageImages.length}
+                  />
+                </div>
+              )}
               
               {/* Action Buttons */}
               <div className="mt-6 space-y-3">
-                {packageImages.length === selectedPackage.maxFiles ? (
+                {!selectedPackage ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600 mb-4">Please select a package to start creating your custom magnets</p>
+                  </div>
+                ) : packageImages.length === selectedPackage.maxFiles ? (
                   <button
                     onClick={handleAddToCart}
                     className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
@@ -430,7 +462,7 @@ export default function Custom() {
                   />
                 )}
                 
-                {packageImages.length > 0 && packageImages.length < selectedPackage.maxFiles && (
+                {selectedPackage && packageImages.length > 0 && packageImages.length < selectedPackage.maxFiles && (
                   <button
                     onClick={() => document.querySelector('input[type="file"]')?.click()}
                     className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"

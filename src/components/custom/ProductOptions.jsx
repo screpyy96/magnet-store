@@ -11,17 +11,23 @@ const SIZES = [
 ];
 
 const FINISHES = [
-  
   {
     id: 'rigid',
     name: 'Rigid',
-    description: 'Hard magnetic backing, extra strong hold'
+    description: 'Hard magnetic backing, extra strong hold',
+    popular: true
+  },
+  {
+    id: 'flexible',
+    name: 'Flexible',
+    description: 'Soft vinyl finish, easy to bend',
+    comingSoon: true
   }
 ];
 
 export default function ProductOptions({ 
   selectedSize = '5x5', 
-  selectedFinish = 'flexible',
+  selectedFinish = 'rigid',
   onSizeChange,
   onFinishChange 
 }) {
@@ -77,10 +83,13 @@ export default function ProductOptions({
           {FINISHES.map((finish) => (
             <button
               key={finish.id}
-              onClick={() => onFinishChange?.(finish.id)}
+              onClick={() => !finish.comingSoon && onFinishChange?.(finish.id)}
+              disabled={finish.comingSoon}
               className={`relative flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 ${
                 selectedFinish === finish.id
                   ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
+                  : finish.comingSoon
+                  ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
                   : 'border-gray-200 hover:border-gray-300 bg-white'
               }`}
             >
@@ -102,6 +111,11 @@ export default function ProductOptions({
               {finish.popular && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   Recommended
+                </span>
+              )}
+              {finish.comingSoon && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  Soon
                 </span>
               )}
             </button>

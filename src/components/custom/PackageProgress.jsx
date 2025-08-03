@@ -8,6 +8,10 @@ export default function PackageProgress({
   imagesForCurrentPackageCount
 }) {
   
+  if (!selectedPackage) {
+    return null;
+  }
+  
   if (parseInt(selectedPackage.id) <= 1) {
     return null;
   }
