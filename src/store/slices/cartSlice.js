@@ -12,118 +12,137 @@ const cartSlice = createSlice({
   reducers: {
     addItem(state, action) {
       const newItem = action.payload;
-      const customData = newItem.custom_data ? JSON.parse(newItem.custom_data) : null;
+      console.log('Redux addItem received:', {
+        id: newItem.id,
+        name: newItem.name,
+        price: newItem.price,
+        totalPrice: newItem.totalPrice,
+        priceType: typeof newItem.price,
+        totalPriceType: typeof newItem.totalPrice,
+        custom_data: newItem.custom_data
+      });
+      const customData = newItem.custom_data ? JSON.parse(newItem.custom_data) : {};
       
-      // Check if this is a package item or single magnet
-      const isPackageItem = customData && customData.packageId && customData.packageId !== '1';
-      
-      // Check if this is a single magnet (packageId = 1)
-      const isSingleMagnet = customData && customData.packageId === '1';
-      
-      if (isPackageItem) {
-        // Handle package items
-        const packageId = `package-${customData.packageId}`;
+      // Check if this is a custom magnet package (new format) or old format
+      if (customData.type === 'custom_magnet_package' || customData.isPackage === true) {
+        console.log('Processing package item:', {
+          newItemPrice: newItem.price,
+          newItemPriceType: typeof newItem.price,
+          newItemTotalPrice: newItem.totalPrice,
+          newItemTotalPriceType: typeof newItem.totalPrice
+        });
         
-        // Try to find existing package of the same type
-        const existingPackage = state.items.find(item => {
+        // For packages, always replace existing package of same type
+        const packageId = customData.packageId || customData.packageSize;
+        const existingPackageIndex = state.items.findIndex(item => {
           try {
-            const itemData = item.custom_data ? JSON.parse(item.custom_data) : null;
-            return itemData && itemData.isPackage && itemData.packageId === customData.packageId;
-          } catch (e) {
+            const itemData = item.custom_data ? JSON.parse(item.custom_data) : {};
+            const itemPackageId = itemData.packageId || itemData.packageSize;
+            return (itemData.type === 'custom_magnet_package' || itemData.isPackage === true) && 
+                   itemPackageId === packageId;
+          } catch {
             return false;
           }
         });
         
-        if (existingPackage) {
-          // Add to existing package
-          const packageData = JSON.parse(existingPackage.custom_data);
-          packageData.items.push({
-            id: newItem.id,
-            image: newItem.image,
-            name: newItem.name
-          });
-          
-          // Update package data
-          existingPackage.custom_data = JSON.stringify(packageData);
-          existingPackage.quantity = packageData.items.length;
-          existingPackage.totalPrice = (customData.packagePrice / customData.packageSize) * packageData.items.length;
-        } else {
-          // Create new package
-          const packageItem = {
-            id: packageId,
-            name: `Custom Magnets Package (${customData.packageName})`,
-            price: customData.packagePrice / customData.packageSize,
+        if (existingPackageIndex >= 0) {
+          // Replace existing package
+          const finalPrice = parseFloat(newItem.price) || 0;
+          console.log('Replacing existing package with price:', finalPrice);
+          state.items[existingPackageIndex] = {
+            ...newItem,
+            price: finalPrice,
             quantity: 1,
-            totalPrice: customData.packagePrice,
-            image: newItem.image,
-            custom_data: JSON.stringify({
-              isPackage: true,
-              packageId: customData.packageId,
-              packageName: customData.packageName,
-              packagePrice: customData.packagePrice,
-              packageSize: customData.packageSize,
-              items: [{
-                id: newItem.id,
-                image: newItem.image,
-                name: newItem.name
-              }]
-            })
+            totalPrice: finalPrice
           };
-          state.items.push(packageItem);
+        } else {
+          // Add new package
+          const finalPrice = parseFloat(newItem.price) || 0;
+          console.log('Adding new package with price:', finalPrice);
+          state.items.push({
+            ...newItem,
+            price: finalPrice,
+            quantity: 1,
+            totalPrice: finalPrice
+          });
         }
-      } else if (isSingleMagnet) {
-        // Handle single magnets - always add as separate items
+      } else if (customData.type === 'custom_magnet') {
+        // Single custom magnets - always add as separate items
         state.items.push({
           ...newItem,
-          image: newItem.image || null,
-          fileData: newItem.fileData || newItem.image || null,
           quantity: 1,
-          totalPrice: newItem.price
+          totalPrice: parseFloat(newItem.price) || 0
         });
       } else {
-        // Handle regular non-magnet items
-        const existingItem = state.items.find(item => item.id === newItem.id);
+        // Regular products - check if already exists
+        const existingItemIndex = state.items.findIndex(item => 
+          item.id === newItem.id && 
+          (!item.custom_data || !item.custom_data.includes('custom_magnet'))
+        );
         
-        if (existingItem) {
-          existingItem.quantity++;
-          existingItem.totalPrice = existingItem.price * existingItem.quantity;
+        if (existingItemIndex >= 0) {
+          // Update quantity for existing item
+          state.items[existingItemIndex].quantity += 1;
+          state.items[existingItemIndex].totalPrice = 
+            state.items[existingItemIndex].price * state.items[existingItemIndex].quantity;
         } else {
+          // Add new item
           state.items.push({
             ...newItem,
             quantity: 1,
-            totalPrice: newItem.price
+            totalPrice: parseFloat(newItem.price) || 0
           });
         }
       }
       
       // Recalculate totals
-      state.totalQuantity = state.items.reduce((total, item) => total + item.quantity, 0);
-      state.totalAmount = state.items.reduce((total, item) => total + item.totalPrice, 0);
+      state.totalQuantity = state.items.reduce((total, item) => total + (item.quantity || 1), 0);
+      state.totalAmount = state.items.reduce((total, item) => {
+        const price = parseFloat(item.totalPrice || item.price || 0);
+        return total + price;
+      }, 0);
+      
+      console.log('Redux totals recalculated:', {
+        totalQuantity: state.totalQuantity,
+        totalAmount: state.totalAmount,
+        items: state.items.map(item => ({
+          id: item.id,
+          price: item.price,
+          totalPrice: item.totalPrice,
+          quantity: item.quantity
+        }))
+      });
     },
     
     removeItem(state, action) {
       const index = action.payload;
       if (index >= 0 && index < state.items.length) {
-        const quantity = state.items[index].quantity || 1;
-        state.totalQuantity -= quantity;
-        state.totalAmount -= state.items[index].price * quantity;
         state.items.splice(index, 1);
+        
+        // Recalculate totals
+        state.totalQuantity = state.items.reduce((total, item) => total + (item.quantity || 1), 0);
+        state.totalAmount = state.items.reduce((total, item) => {
+          const price = parseFloat(item.totalPrice || item.price || 0);
+          return total + price;
+        }, 0);
       }
     },
     
     updateQuantity(state, action) {
       const { index, quantity } = action.payload;
-      if (index >= 0 && index < state.items.length) {
+      if (index >= 0 && index < state.items.length && quantity > 0) {
         const item = state.items[index];
-        const oldQuantity = item.quantity || 1;
-        const quantityDiff = quantity - oldQuantity;
+        const oldTotal = item.totalPrice;
         
         item.quantity = quantity;
-        state.totalQuantity += quantityDiff;
-        state.totalAmount = state.items.reduce(
-          (total, item) => total + (item.price * item.quantity),
-          0
-        );
+        item.totalPrice = item.price * quantity;
+        
+        // Update totals
+        state.totalQuantity = state.items.reduce((total, item) => total + (item.quantity || 1), 0);
+        state.totalAmount = state.items.reduce((total, item) => {
+          const price = parseFloat(item.totalPrice || item.price || 0);
+          return total + price;
+        }, 0);
       }
     },
     
@@ -137,9 +156,31 @@ const cartSlice = createSlice({
 
 export const { addItem, removeItem, updateQuantity, clearCart } = cartSlice.actions;
 
-// Adăugăm și selectori pentru a extrage starea mai ușor
+// Selectors
 export const selectCartItems = state => state.cart.items;
 export const selectCartTotalAmount = state => state.cart.totalAmount;
 export const selectCartTotalQuantity = state => state.cart.totalQuantity;
 
-export default cartSlice.reducer; 
+// Selector to get package items
+export const selectPackageItems = state => 
+  state.cart.items.filter(item => {
+    try {
+      const customData = item.custom_data ? JSON.parse(item.custom_data) : {};
+      return customData.type === 'custom_magnet_package';
+    } catch {
+      return false;
+    }
+  });
+
+// Selector to get single magnet items
+export const selectSingleMagnetItems = state =>
+  state.cart.items.filter(item => {
+    try {
+      const customData = item.custom_data ? JSON.parse(item.custom_data) : {};
+      return customData.type === 'custom_magnet';
+    } catch {
+      return false;
+    }
+  });
+
+export default cartSlice.reducer;

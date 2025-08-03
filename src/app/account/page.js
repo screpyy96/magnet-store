@@ -1,10 +1,12 @@
 "use client"
 
+import React from 'react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from "@/contexts/AuthContext"
 import PushNotificationSubscriber from '@/components/PushNotificationSubscriber'
 import AddressManager from '@/components/account/AddressManager'
+import OrderHistory from '@/components/account/OrderHistory'
 
 export default function AccountPage() {
   const router = useRouter()
@@ -121,7 +123,7 @@ export default function AccountPage() {
             {activeTab === 'orders' && (
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">Order History</h2>
-                <p className="text-gray-500">Feature coming soon. You'll be able to view your order history here.</p>
+                <OrderHistory />
               </div>
             )}
             

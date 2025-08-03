@@ -30,7 +30,7 @@ export const uploadCustomMagnetBlob = async (blob, userId) => {
     const timestamp = Date.now()
     const fileName = `${userId}/custom/${timestamp}.png`
     
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('magnet-orders')
       .upload(fileName, blob, {
         contentType: 'image/png',

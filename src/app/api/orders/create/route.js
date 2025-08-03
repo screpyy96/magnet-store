@@ -1,36 +1,25 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
-import { stripe } from '@/lib/stripe-server'
-import webpush from 'web-push'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
-// Verifică dacă cheile VAPID sunt configurate
-if (process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-  webpush.setVapidDetails(
-    'mailto:' + process.env.NEXT_PUBLIC_WEB_PUSH_EMAIL,
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-    process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY
-  );
-  console.log('VAPID keys configured for push notifications');
-} else {
-  console.warn('VAPID keys not configured, push notifications will not work');
-}
 
 export async function POST(request) {
   try {
+    console.log('API route called');
+    
     const { 
       items, 
       shippingAddressId,
       paymentMethodId,
-      userId // Accept userId directly
+      userId,
+      total
     } = await request.json()
 
     console.log('Received order request with:', {
       itemsCount: items?.length,
       hasShippingAddress: !!shippingAddressId,
       hasPaymentMethod: !!paymentMethodId,
-      hasUserId: !!userId
+      hasUserId: !!userId,
+      total: total
     })
 
     // Validate required fields
@@ -62,70 +51,14 @@ export async function POST(request) {
       )
     }
 
-    // Get all cookies for debugging
-    const cookieStore = await cookies()
-    const allCookies = cookieStore.getAll()
-    console.log('Available cookies:', allCookies.map(c => ({ name: c.name, path: c.path })))
-    
     // Create Supabase client
-    const supabase = createClient()
-    
-    // Create a service role client for operations that need to bypass RLS
-    const serviceRoleClient = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SERVICE_ROLE_KEY,
-      {
-        auth: {
-          persistSession: false
-        }
-      }
-    )
-    
-    // Optional session check - but we'll use the provided userId anyway
-    const { data, error: sessionError } = await supabase.auth.getSession()
-    console.log('Auth session check:', {
-      hasSession: !!data?.session,
-      sessionError: sessionError ? sessionError.message : null,
-      usingProvidedUserId: true
-    })
-    
-    // Use the provided userId instead of relying on session
+    console.log('Creating Supabase client...');
+    const supabase = await createClient()
+    console.log('Supabase client created successfully');
+
+    // Use the provided userId
     const user_id = userId;
     console.log('Using user_id:', user_id);
-
-    // Mai întâi obținem sau creăm customer-ul Stripe
-    let stripeCustomerId
-    
-    // Verifică dacă userul are deja un customer ID în Stripe
-    const { data: stripeCustomer } = await supabase
-      .from('stripe_customers')
-      .select('stripe_customer_id')
-      .eq('user_id', user_id)
-      .single()
-
-    if (stripeCustomer) {
-      stripeCustomerId = stripeCustomer.stripe_customer_id
-    } else {
-      // Creează un nou customer în Stripe
-      const customer = await stripe.customers.create({
-        email: data?.session?.user.email,
-        metadata: {
-          supabase_user_id: user_id
-        }
-      })
-
-      // Salvează customer ID-ul în baza de date
-      await supabase
-        .from('stripe_customers')
-        .insert([
-          {
-            user_id: user_id,
-            stripe_customer_id: customer.id
-          }
-        ])
-
-      stripeCustomerId = customer.id
-    }
 
     // Get shipping address details
     const { data: addressData, error: addressError } = await supabase
@@ -137,69 +70,31 @@ export async function POST(request) {
     if (addressError) throw addressError
 
     // Calculate order totals
-    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const subtotal = total || items.reduce((sum, item) => sum + (item.totalPrice || item.price * (item.quantity || 1)), 0)
     const shippingCost = subtotal >= 50 ? 0 : 4.99
     const tax = subtotal * 0.20 // 20% VAT
     const totalPrice = subtotal + shippingCost + tax
 
-    // Check if we're using a mock payment method (for development)
-    const isMockPaymentMethod = paymentMethodId && paymentMethodId.startsWith('pm_mock_');
-    
-    let paymentIntent;
-    
-    if (isMockPaymentMethod && process.env.NODE_ENV === 'development') {
-      // In development mode with mock payment, create a mock payment intent
-      console.log('Using mock payment method in development mode');
-      paymentIntent = {
-        id: 'pi_mock_' + Math.random().toString(36).substring(2, 15),
-        status: 'succeeded',
-        amount: Math.round(totalPrice * 100),
-        currency: 'gbp',
-        customer: stripeCustomerId
-      };
-    } else {
-      // Real Stripe payment
-      // Creează payment intent în Stripe cu customer ID-ul
-      const paymentIntentParams = {
-        amount: Math.round(totalPrice * 100),
-        currency: 'gbp',
-        customer: stripeCustomerId,
-        metadata: {
-          user_id: user_id
-        }
-      };
-  
-      // Only add payment_method and confirm if we have a valid payment method
-      if (paymentMethodId) {
-        paymentIntentParams.payment_method = paymentMethodId;
-        paymentIntentParams.confirm = true;
-        paymentIntentParams.payment_method_types = ['card'];
-      } else {
-        // If no payment method, create a PaymentIntent without confirming
-        paymentIntentParams.payment_method_types = ['card'];
-        paymentIntentParams.setup_future_usage = 'off_session';
-      }
-  
-      // Create the PaymentIntent
-      paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
-    }
+    console.log('Order totals calculated:', {
+      subtotal,
+      shippingCost,
+      tax,
+      totalPrice
+    })
 
-    // Creează comanda în baza de date - using service role client
-    const { data: order, error: orderError } = await serviceRoleClient
+    // Create order in database
+    const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert([
         {
           user_id: user_id,
-          status: 'processing',
-          total_price: totalPrice,
-          shipping_address: addressData ? `${addressData.address_line1}, ${addressData.city}, ${addressData.postal_code}` : '',
+          status: 'pending',
           shipping_address_id: shippingAddressId,
-          shipping_method: 'standard',
-          shipping_cost: shippingCost,
           subtotal: subtotal,
-          tax: tax,
+          shipping_cost: shippingCost,
           total: totalPrice,
-          notes: '',
+          payment_status: 'pending',
+          payment_intent_id: `demo_${Date.now()}`
         }
       ])
       .select()
@@ -210,38 +105,80 @@ export async function POST(request) {
       throw orderError;
     }
 
-    // Creăm array-ul de order_items fără product_id
-    const orderItems = items.map(item => {
-      // Try to extract image from all possible sources
-      const imageUrl = item.image_url || item.fileData || item.image || 
-                        (item.custom_data && typeof item.custom_data === 'string' ? 
-                          JSON.parse(item.custom_data).image || JSON.parse(item.custom_data).imageUrl || 
-                          JSON.parse(item.custom_data).url : 
-                          item.custom_data?.image || item.custom_data?.imageUrl || item.custom_data?.url);
-                          
-      console.log('Processing order item:', {
-        itemId: item.id,
-        foundImageUrl: imageUrl,
-        originalData: {
-          image_url: item.image_url,
-          fileData: item.fileData,
-          image: item.image
-        }
-      });
-                          
-      return {
-        order_id: order.id,
-        product_name: item.name || 'Custom Magnet',
-        quantity: item.quantity || 1,
-        size: item.size || 'standard',
-        price_per_unit: item.price,
-        special_requirements: item.special_requirements || '',
-        image_url: imageUrl || null
-      };
-    });
+    console.log('Order created successfully:', order.id);
 
-    // Inserăm datele în tabela order_items - using service role client
-    const { data: orderItemsData, error: orderItemsError } = await serviceRoleClient
+    // Create order_items array
+    const orderItems = [];
+    
+    for (const item of items) {
+      try {
+        const customData = item.custom_data ? JSON.parse(item.custom_data) : {};
+        
+        if (customData.type === 'custom_magnet_package') {
+          // Handle package - extract all images
+          const images = customData.images || [];
+          const thumbnails = customData.thumbnails || item.images || [];
+          const packageName = customData.packageName || item.name || 'Custom Magnet Package';
+          
+          console.log('Processing package:', {
+            packageId: customData.packageId,
+            imageCount: images.length || thumbnails.length,
+            packageName: packageName
+          });
+          
+          // Use full images if available, otherwise use thumbnails
+          const imagesToProcess = images.length > 0 ? images : thumbnails;
+          
+          // Create one order item per image in the package
+          imagesToProcess.forEach((imageUrl, index) => {
+            orderItems.push({
+              order_id: order.id,
+              product_name: `${packageName} - Image ${index + 1}`,
+              quantity: 1,
+              size: customData.size || '5x5',
+              price_per_unit: customData.pricePerUnit || (item.price / imagesToProcess.length),
+              special_requirements: `Package ${customData.packageId} - ${customData.finish || 'flexible'} finish`,
+              image_url: imageUrl
+            });
+          });
+        } else {
+          // Handle single items or regular products
+          const imageUrl = item.image_url || item.fileData || item.image || 
+                          (customData.image || customData.imageUrl || customData.url);
+          
+          console.log('Processing single item:', {
+            itemId: item.id,
+            foundImageUrl: !!imageUrl,
+            itemName: item.name
+          });
+          
+          orderItems.push({
+            order_id: order.id,
+            product_name: item.name || 'Custom Magnet',
+            quantity: item.quantity || 1,
+            size: customData.size || item.size || 'standard',
+            price_per_unit: item.price,
+            special_requirements: item.special_requirements || '',
+            image_url: imageUrl || null
+          });
+        }
+      } catch (error) {
+        console.error('Error processing item:', error);
+        // Fallback for items that fail parsing
+        orderItems.push({
+          order_id: order.id,
+          product_name: item.name || 'Product',
+          quantity: item.quantity || 1,
+          size: 'standard',
+          price_per_unit: item.price,
+          special_requirements: '',
+          image_url: null
+        });
+      }
+    }
+
+    // Insert data into order_items table
+    const { data: orderItemsData, error: orderItemsError } = await supabase
       .from('order_items')
       .insert(orderItems);
 
@@ -250,46 +187,14 @@ export async function POST(request) {
       throw orderItemsError;
     }
 
-    // Adaugă tranzacția de plată - using service role to bypass RLS
-    const { error: paymentError } = await serviceRoleClient
-      .from('payment_transactions')
-      .insert([
-        {
-          order_id: order.id,
-          user_id: user_id,
-          payment_method: isMockPaymentMethod ? 'stripe_mock' : 'stripe',
-          amount: totalPrice,
-          status: paymentIntent.status,
-          stripe_payment_intent_id: paymentIntent.id
-        }
-      ])
+    console.log('Order items created successfully:', orderItemsData?.length || 0, 'items');
 
-    if (paymentError) {
-      console.error('Failed to insert payment transaction:', paymentError);
-      throw paymentError;
-    }
-
-    // Adaugă notificarea către admin
-    await sendAdminNotification(supabase, order.id, { total: totalPrice, ...order })
-
-    // După ce creezi comanda, actualizează adresa existentă în loc să creezi una nouă
-    const { error: shippingAddressError } = await supabase
-      .from('shipping_addresses')
-      .update({
-        is_default: true,  // Marchează adresa ca fiind implicită pentru acest utilizator
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', shippingAddressId);  // Actualizează adresa existentă în loc să creezi una nouă
-
-    if (shippingAddressError) {
-      console.error('Eroare la actualizarea adresei de livrare:', shippingAddressError);
-      throw shippingAddressError;
-    }
+    console.log('Order created successfully without payment transaction (demo mode)');
 
     return NextResponse.json({ 
       success: true, 
       orderId: order.id,
-      paymentIntentId: paymentIntent.id 
+      message: 'Order created successfully'
     })
 
   } catch (error) {
@@ -298,103 +203,5 @@ export async function POST(request) {
       { error: error.message || 'Failed to create order' },
       { status: 500 }
     )
-  }
-}
-
-// Funcție pentru trimiterea notificării către admin
-async function sendAdminNotification(supabaseClient, orderId, orderDetails) {
-  try {
-    console.log('Starting admin notification process for order:', orderId);
-    
-    // Verifică dacă cheile VAPID sunt configurate
-    if (!process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-      console.error('VAPID keys not configured, cannot send notifications');
-      console.log('VAPID Private Key exists:', !!process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY);
-      console.log('VAPID Public Key exists:', !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
-      return;
-    }
-
-    // Configurează sau reconfirmă cheile Web Push
-    webpush.setVapidDetails(
-      'mailto:' + process.env.NEXT_PUBLIC_WEB_PUSH_EMAIL,
-      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-      process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY
-    );
-    
-    // Get all admin push subscriptions directly from admin_push_subscriptions table (plural)
-    const { data: subscriptions, error: subError } = await supabaseClient
-      .from('admin_push_subscriptions')
-      .select('*');
-    
-    if (subError) {
-      console.error('Error fetching admin push subscriptions:', subError);
-      return;
-    }
-    
-    if (!subscriptions || subscriptions.length === 0) {
-      console.log('No admin push subscriptions found');
-      return;
-    }
-    
-    console.log(`Sending notifications to ${subscriptions.length} admin devices`);
-    
-    // Debug output of subscription data (with sensitive data masked)
-    subscriptions.forEach((sub, index) => {
-      console.log(`Subscription ${index + 1}:`, {
-        user_id: sub.user_id,
-        endpoint: sub.endpoint ? sub.endpoint.substring(0, 30) + '...' : 'missing',
-        has_valid_data: !!sub.subscription
-      });
-    });
-    
-    // Pregătește payload-ul pentru notificare
-    const payload = JSON.stringify({
-      title: 'New Order!',
-      body: `Order #${orderId.substring(0, 8)} for £${orderDetails.total.toFixed(2)}`,
-      data: {
-        orderId: orderId,
-        total: orderDetails.total,
-        url: `/admin/orders/${orderId}`
-      }
-    });
-    
-    // Trimite notificări la toate dispozitivele
-    const notificationPromises = subscriptions.map(subscription => {
-      // Verifică dacă avem un obiect de abonament valid
-      if (!subscription.subscription) {
-        console.error('Invalid subscription object for user:', subscription.user_id);
-        return Promise.resolve();
-      }
-      
-      // Utilizăm direct obiectul subscription stocat în jsonb
-      const pushSubscription = subscription.subscription;
-      
-      return webpush.sendNotification(pushSubscription, payload)
-        .then(() => {
-          console.log(`Successfully sent notification to endpoint: ${pushSubscription.endpoint.substring(0, 30)}...`);
-        })
-        .catch(error => {
-          console.error('Error sending notification:', error.message, error.statusCode);
-          console.log('Failed subscription details:', { 
-            user_id: subscription.user_id,
-            endpoint: pushSubscription.endpoint.substring(0, 30) + '...'
-          });
-          
-          // Dacă abonamentul nu mai este valid, îl ștergem din baza de date
-          if (error.statusCode === 404 || error.statusCode === 410) {
-            console.log('Subscription expired or invalid, removing from database');
-            return supabaseClient
-              .from('admin_push_subscriptions')
-              .delete()
-              .eq('endpoint', subscription.endpoint);
-          }
-        });
-    });
-    
-    await Promise.all(notificationPromises);
-    console.log('Notification process completed');
-    
-  } catch (error) {
-    console.error('Error in admin notification process:', error);
   }
 } 

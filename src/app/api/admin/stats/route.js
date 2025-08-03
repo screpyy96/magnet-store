@@ -1,6 +1,9 @@
+import { createClient } from '@/utils/supabase/server';
+import { NextResponse } from 'next/server';
+
 export async function GET() {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     // Obținerea comenzilor
     const { data: orders, error } = await supabase

@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 
 export default function NotFound() {
@@ -11,7 +12,7 @@ export default function NotFound() {
             Page Under Construction
           </h1>
           <p className="text-lg text-gray-600">
-            We're working hard to bring you something amazing. Please check back soon!
+            We&apos;re working hard to bring you something amazing. Please check back soon!
           </p>
         </div>
 

@@ -3,9 +3,18 @@ import { createClient } from '@/lib/supabase';
 
 export async function POST(request) {
   try {
+    // Temporarily disabled - notifications will be implemented later
+    return new Response(JSON.stringify({ 
+      message: 'Notifications temporarily disabled' 
+    }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    /*
     // Check if VAPID keys are configured
     const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    const vapidPrivate = process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY;
+    const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
     
     if (!vapidPublic || !vapidPrivate) {
       console.log('VAPID keys not configured - skipping notification');
@@ -84,6 +93,7 @@ export async function POST(request) {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
+    */
 
   } catch (error) {
     console.error('Notification error:', error);

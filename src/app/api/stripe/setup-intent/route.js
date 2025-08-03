@@ -1,87 +1,58 @@
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import Stripe from 'stripe'
 
 export async function POST(request) {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    console.error('STRIPE_SECRET_KEY is not set');
-    return NextResponse.json(
-      { error: 'Stripe is not configured properly' },
-      { status: 500 }
-    );
-  }
-
   try {
-    console.log('Processing setup intent request');
+    const { amount, currency = 'usd' } = await request.json()
     
-    // Obține datele din body inclusiv userId
-    const body = await request.json().catch(() => ({}));
-    console.log('Request body:', body);
-    
-    const cookieStore = await cookies();
-    console.log('Cookies obtained');
-    
+    if (!amount) {
+      return NextResponse.json(
+        { error: 'Amount is required' },
+        { status: 400 }
+      )
+    }
+
     // Create Supabase client
-    const supabase = createClient();
+    const supabase = await createClient()
+
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    // Verifică sesiunea și/sau userId din request
-    let userId;
-    
-    if (session && session.user && session.user.id) {
-      console.log('User authenticated from session:', session.user.id);
-      userId = session.user.id;
-    } else if (body && body.userId) {
-      console.log('Using userId from request body:', body.userId);
-      userId = body.userId;
-      
-      // Eliminăm verificarea restrictivă și ne bazăm pe clientul autentificat
-      // Putem face o verificare simplă a formatului UUID
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(userId)) {
-        console.error('Invalid user ID format provided');
-        return NextResponse.json(
-          { error: 'Invalid user ID format' },
-          { status: 400 }
-        );
-      }
-    } else {
-      console.log('No valid session or userId found');
+    if (userError || !user) {
       return NextResponse.json(
-        { error: 'You must be logged in to set up a payment method' },
+        { error: 'Unauthorized' },
         { status: 401 }
-      );
+      )
     }
-    
-    // Inițializează Stripe cu verificare explicită
-    let stripe;
-    try {
-      stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2023-10-16',
-      });
-    } catch (stripeInitError) {
-      console.error('Failed to initialize Stripe:', stripeInitError);
+
+    // Create a SetupIntent
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/stripe/create-setup-intent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        customer_id: user.id,
+        amount,
+        currency,
+      }),
+    })
+
+    const setupIntent = await response.json()
+
+    if (!response.ok) {
       return NextResponse.json(
-        { error: 'Payment service configuration error' },
-        { status: 500 }
-      );
+        { error: setupIntent.error || 'Failed to create setup intent' },
+        { status: response.status }
+      )
     }
-    
-    // Adaugă userId explicit în metadata
-    const setupIntent = await stripe.setupIntents.create({
-      metadata: { user_id: userId },
-    });
-    
-    console.log('Setup intent created successfully for user:', userId);
-    return NextResponse.json({ clientSecret: setupIntent.client_secret });
-    
+
+    return NextResponse.json(setupIntent)
   } catch (error) {
-    console.error('Unexpected error in setup-intent API:', error);
+    console.error('Setup intent error:', error)
     return NextResponse.json(
-      { error: 'Internal Server Error: ' + error.message },
+      { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 } 

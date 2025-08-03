@@ -1,169 +1,173 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
-import webpush from 'web-push';
-
-// Definirea directă a cheilor VAPID (doar pentru debugging)
-const FIXED_VAPID_PUBLIC_KEY = 'BJKt-ejZ1-mkWojXS43_DPs1IOnsosD_G-Rn1XX3FWLVHPXuqocQJtYsopqWYZLOfsflWMYwJhG0Jc639EGT62U';
-const FIXED_VAPID_PRIVATE_KEY = '6kWgmY26MUf3JvDOlzBVMffC70kJaCAOO4AmtfrwcWA';
+import { createClient } from '@/lib/supabase';
 
 export async function POST(request) {
   try {
-    // Try to extract subscription data with detailed error handling
-    let requestData;
-    try {
-      requestData = await request.json();
-      console.log('Received request data:', JSON.stringify(requestData));
-    } catch (parseError) {
-      console.error('JSON parsing error:', parseError);
-      return NextResponse.json({ 
-        error: 'Invalid JSON in request body',
-        details: parseError.message
-      }, { status: 400 });
+    // Temporarily disabled - notifications will be implemented later
+    return new Response(JSON.stringify({ 
+      success: true,
+      message: 'Notifications temporarily disabled' 
+    }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    /*
+    const supabase = createClient();
+    const subscription = await request.json();
+
+    // Validate subscription data
+    if (!subscription.endpoint || !subscription.keys) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Invalid subscription data' 
+      }), { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
+
+    // Get the current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    const { subscription } = requestData;
-    
-    if (!subscription) {
-      console.error('No subscription data provided, received:', requestData);
-      return NextResponse.json({ 
-        error: 'No subscription data provided',
-        received: requestData
-      }, { status: 400 });
+    if (authError || !user) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Authentication required' 
+      }), { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
-    
-    // Validate subscription object
-    if (!subscription.endpoint) {
-      console.error('Invalid subscription object, missing endpoint:', subscription);
-      return NextResponse.json({ 
-        error: 'Invalid subscription object (missing endpoint)',
-        received: subscription
-      }, { status: 400 });
-    }
-    
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-    
-    // Verificăm configurarea VAPID
-    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    const vapidPrivateKey = process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY;
-    const webPushEmail = process.env.WEB_PUSH_EMAIL || 'iosifscrepy@gmail.com';
-    
-    // Verificăm autentificarea utilizatorului
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return NextResponse.json(
-        { success: false, message: 'Utilizator neautentificat' },
-        { status: 401 }
-      );
-    }
-    
-    // Verificăm dacă utilizatorul este admin
+
+    // Check if user is admin
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('id', session.user.id)
-      .maybeSingle();
-    
-    if (profileError) {
-      console.error('Eroare la verificarea profilului:', profileError);
-      return NextResponse.json(
-        { success: false, message: 'Eroare la verificarea profilului' },
-        { status: 500 }
-      );
-    }
-    
-    if (!profile?.is_admin) {
-      return NextResponse.json(
-        { success: false, message: 'Acces interzis - utilizator nu este admin' },
-        { status: 403 }
-      );
-    }
-    
-    // IMPORTANT: Verificăm dacă cheile sunt setate corect
-    if (!vapidPublicKey || !vapidPrivateKey) {
-      console.error('Cheile VAPID nu sunt configurate corect:', { 
-        publicKeyExists: !!vapidPublicKey, 
-        privateKeyExists: !!vapidPrivateKey 
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile?.is_admin) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Admin access required' 
+      }), { 
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
       });
-      
-      return NextResponse.json(
-        { success: false, message: 'Configurare server incompletă pentru notificări push' },
-        { status: 500 }
-      );
     }
-    
-    // Configurăm web-push
-    webpush.setVapidDetails(
-      `mailto:${webPushEmail}`,
-      vapidPublicKey,
-      vapidPrivateKey
-    );
-    
-    // Ensure we have a valid subscription object for database storage
-    const subscriptionToStore = {
-      endpoint: subscription.endpoint,
-      keys: subscription.keys,
-      expirationTime: subscription.expirationTime
-    };
-    
-    console.log('Processing subscription:', 
-      `Endpoint: ${subscriptionToStore.endpoint.substring(0, 30)}...`, 
-      `Keys present: ${!!subscriptionToStore.keys}`
-    );
-    
-    // Salvăm abonamentul în baza de date
-    const { error: subscriptionError } = await supabase
+
+    // Check if subscription already exists
+    const { data: existingSubscription, error: checkError } = await supabase
       .from('admin_push_subscriptions')
-      .upsert({
-        endpoint: subscriptionToStore.endpoint,
-        subscription: subscriptionToStore,
-        user_id: session.user.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('endpoint', subscription.endpoint)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking existing subscription:', checkError);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Database error' 
+      }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
       });
-    
-    if (subscriptionError) {
-      console.error('Eroare la salvarea abonamentului:', subscriptionError);
-      return NextResponse.json(
-        { success: false, message: 'Eroare la salvarea abonamentului', error: subscriptionError },
-        { status: 500 }
-      );
     }
-    
-    // Trimitem o notificare de test pentru a confirma funcționalitatea
+
+    let result;
+
+    if (existingSubscription) {
+      // Update existing subscription
+      const { error: updateError } = await supabase
+        .from('admin_push_subscriptions')
+        .update({
+          p256dh: subscription.keys.p256dh,
+          auth: subscription.keys.auth,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingSubscription.id);
+
+      if (updateError) {
+        console.error('Error updating subscription:', updateError);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          message: 'Failed to update subscription' 
+        }), { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      result = { success: true, message: 'Subscription updated' };
+    } else {
+      // Create new subscription
+      const { error: insertError } = await supabase
+        .from('admin_push_subscriptions')
+        .insert({
+          user_id: user.id,
+          endpoint: subscription.endpoint,
+          p256dh: subscription.keys.p256dh,
+          auth: subscription.keys.auth,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (insertError) {
+        console.error('Error creating subscription:', insertError);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          message: 'Failed to create subscription' 
+        }), { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      result = { success: true, message: 'Subscription created' };
+    }
+
+    // Send a test notification
     try {
-      const payload = JSON.stringify({
-        title: 'Subscription Successful!',
-        body: 'You will now receive notifications for new orders.',
-        data: {
-          url: '/admin/orders',
-          time: new Date().toISOString()
-        }
+      const testResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subscription: subscription,
+          title: 'Notification Test',
+          body: 'You will now receive notifications for new orders.',
+          icon: '/icon-192x192.png',
+          badge: '/icon-192x192.png'
+        })
       });
-      
-      await webpush.sendNotification(subscription, payload);
-      console.log('Test notification sent successfully!');
-    } catch (notifError) {
-      console.error('Error sending test notification:', notifError);
-      // Nu întrerupem procesul, doar logăm eroarea
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Subscription registered, but test notification failed',
-        error: notifError.message
-      });
+
+      if (testResponse.ok) {
+        result.message += ' - Test notification sent';
+      }
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      // Don't fail the subscription if test notification fails
     }
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Subscription registered successfully' 
+
+    return new Response(JSON.stringify(result), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     });
+    */
+
   } catch (error) {
-    console.error('Server error in subscription API:', error);
-    return NextResponse.json(
-      { success: false, message: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Subscription error:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      message: 'Internal server error',
+      details: error.message 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 } 

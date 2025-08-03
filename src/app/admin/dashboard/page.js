@@ -1,12 +1,14 @@
 'use client'
 
+import React from 'react';
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import AdminNotificationSubscription from '@/components/admin/AdminNotificationSubscription'
+// Temporarily disabled - notifications will be implemented later
+// import AdminNotificationSubscription from '@/components/admin/AdminNotificationSubscription'
 
 export default function AdminDashboard() {
   const { user, supabase } = useAuth()
@@ -334,7 +336,11 @@ export default function AdminDashboard() {
         <p className="text-sm text-gray-600 mb-2">
           Primești notificări instant când sunt plasate comenzi noi sau când apar cereri importante.
         </p>
-        <AdminNotificationSubscription />
+        {/* Temporarily disabled - notifications will be implemented later */}
+        {/* <AdminNotificationSubscription /> */}
+        <p className="text-sm text-gray-500 italic">
+          Notificările vor fi implementate în curând...
+        </p>
       </div>
 
       {/* Stats Cards */}

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -75,6 +77,17 @@ export default function ProductShowcase() {
   const router = useRouter();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
+  // Function to determine package and price based on image count
+  const getPackageForImageCount = (imageCount) => {
+    if (imageCount === 0) return null;
+    if (imageCount === 1) return { name: '1 Custom Magnet', price: '£5.00', packageSize: 1 };
+    if (imageCount <= 6) return { name: '6 Custom Magnets', price: '£17.00', packageSize: 6 };
+    if (imageCount <= 9) return { name: '9 Custom Magnets', price: '£23.00', packageSize: 9 };
+    if (imageCount <= 12) return { name: '12 Custom Magnets', price: '£28.00', packageSize: 12 };
+    if (imageCount <= 16) return { name: '16 Custom Magnets', price: '£36.00', packageSize: 16 };
+    return { name: '16 Custom Magnets', price: '£36.00', packageSize: 16 }; // Max package
+  };
+
   const openModal = (product) => {
     setSelectedProduct(product);
     setActiveImageIndex(0);
@@ -85,25 +98,28 @@ export default function ProductShowcase() {
   const handleOrderNow = (e, product) => {
     e.preventDefault();
     const imageCount = uploadedImages[product.id]?.length || 0;
-    const packageSize = parseInt(product.name.match(/\d+/)[0]);
     
-    if (imageCount < packageSize) {
-      setUploadError(`Please upload ${packageSize} images (${packageSize - imageCount} more needed)`);
+    if (imageCount === 0) {
+      setUploadError('Please upload at least one image to continue.');
       return;
     }
     
+    // Determine the appropriate package based on image count
+    const selectedPackage = getPackageForImageCount(imageCount);
+    
     // Store the uploaded images in localStorage
     const orderData = {
-      packageSize,
+      packageSize: selectedPackage.packageSize,
       images: uploadedImages[product.id],
-      price: product.price,
-      name: product.name
+      price: selectedPackage.price,
+      name: selectedPackage.name,
+      actualImageCount: imageCount
     };
     
     localStorage.setItem('customMagnetOrder', JSON.stringify(orderData));
     
     // Redirect to custom page with the package size
-    router.push(`/custom?package=${packageSize}`);
+    router.push(`/custom?package=${selectedPackage.packageSize}`);
   };
 
   const closeModal = () => {
@@ -114,18 +130,25 @@ export default function ProductShowcase() {
   const handleImageUpload = (e, productId, maxImages) => {
     const files = Array.from(e.target.files);
     const currentImages = uploadedImages[productId]?.length || 0;
-    const availableSlots = maxImages - currentImages;
     
-    if (files.length > availableSlots) {
-      setUploadError(`You can only upload up to ${maxImages} images for this package.`);
+    if (files.length > 1) {
+      setUploadError('Please upload only one image at a time.');
       return;
     }
     
-    const newImages = files.map(file => URL.createObjectURL(file));
+    if (currentImages >= 16) {
+      setUploadError('You can upload up to 16 images maximum.');
+      return;
+    }
+    
+    if (files.length === 0) return;
+    
+    const file = files[0];
+    const newImage = URL.createObjectURL(file);
     
     setUploadedImages(prev => ({
       ...prev,
-      [productId]: [...(prev[productId] || []), ...newImages].slice(0, maxImages)
+      [productId]: [...(prev[productId] || []), newImage]
     }));
     
     setUploadError('');
@@ -336,9 +359,25 @@ export default function ProductShowcase() {
                       <label className="block text-sm font-medium text-gray-700">
                         Upload your images
                       </label>
-                      <p className="text-gray-600 mb-6">
-                        Upload {selectedProduct.name.match(/\d+/)[0]} photos to create your personalised magnets. All images are printed with our premium UK-made quality and delivered to your door.
-                      </p>
+                      {(() => {
+                        const imageCount = uploadedImages[selectedProduct.id]?.length || 0;
+                        const selectedPackage = getPackageForImageCount(imageCount);
+                        return (
+                          <div className="text-gray-600 mb-6">
+                            <p>Upload photos to create your personalised magnets. All images are printed with our premium UK-made quality and delivered to your door.</p>
+                            {imageCount > 0 && selectedPackage && (
+                              <div className="mt-2 p-3 bg-pink-50 rounded-lg border border-pink-200">
+                                <p className="text-sm font-medium text-pink-800">
+                                  Current package: {selectedPackage.name} - {selectedPackage.price}
+                                </p>
+                                <p className="text-xs text-pink-600">
+                                  {imageCount} image{imageCount !== 1 ? 's' : ''} uploaded
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                     {uploadError && (
                       <div className="text-red-600 text-sm mb-2">{uploadError}</div>
@@ -351,19 +390,18 @@ export default function ProductShowcase() {
                           name="file-upload"
                           type="file"
                           className="sr-only"
-                          multiple
                           accept="image/*"
                           onChange={(e) => handleImageUpload(e, selectedProduct.id, parseInt(selectedProduct.name.match(/\d+/)[0]))}
                         />
                         <FiUpload className="mx-auto h-12 w-12 text-pink-400" />
                         <div className="mt-4 flex text-sm text-gray-600 justify-center">
                           <span className="relative cursor-pointer rounded-md font-medium text-pink-600 hover:text-pink-500">
-                            <span>Upload your photos</span>
+                            <span>Upload one photo</span>
                           </span>
                           <p className="pl-1">or drag and drop</p>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                          We accept PNG, JPG up to 10MB per file
+                          Upload one image at a time (PNG, JPG up to 10MB)
                         </p>
                       </div>
                     </div>
@@ -391,13 +429,34 @@ export default function ProductShowcase() {
                 </div>
                 
                 <div className="mt-5 sm:mt-6">
-                  <button
-                    onClick={(e) => handleOrderNow(e, selectedProduct)}
-                    className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white font-medium py-3 px-6 rounded-full hover:opacity-90 transition-all hover:shadow-lg transform hover:-translate-y-0.5 mt-6"
-                    disabled={!uploadedImages[selectedProduct.id] || uploadedImages[selectedProduct.id].length === 0}
-                  >
-                    Continue to Secure Checkout
-                  </button>
+                  {(() => {
+                    const imageCount = uploadedImages[selectedProduct.id]?.length || 0;
+                    const selectedPackage = getPackageForImageCount(imageCount);
+                    return (
+                      <div>
+                        {imageCount > 0 && selectedPackage && (
+                          <div className="mb-4 p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="text-lg font-bold text-gray-900">{selectedPackage.name}</p>
+                                <p className="text-sm text-gray-600">{selectedPackage.price}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm text-gray-600">{imageCount} image{imageCount !== 1 ? 's' : ''}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <button
+                          onClick={(e) => handleOrderNow(e, selectedProduct)}
+                          className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white font-medium py-3 px-6 rounded-full hover:opacity-90 transition-all hover:shadow-lg transform hover:-translate-y-0.5"
+                          disabled={!uploadedImages[selectedProduct.id] || uploadedImages[selectedProduct.id].length === 0}
+                        >
+                          Continue to Secure Checkout
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

@@ -65,17 +65,8 @@ export const metadata = {
     yandex: 'YANDEX_VERIFICATION_CODE',
     bing: 'BING_VERIFICATION_CODE'
   },
-  canonical: 'https://mysweetmagnets.co.uk',
-  alternates: {
-    canonical: 'https://mysweetmagnets.co.uk',
-    languages: {
-      'en-GB': 'https://mysweetmagnets.co.uk',
-    },
-  },
-  metadataBase: new URL('https://mysweetmagnets.co.uk'),
   applicationName: 'My Sweet Magnets UK',
   authors: [{ name: 'My Sweet Magnets Team' }],
   generator: 'Next.js',
   referrer: 'origin-when-cross-origin',
-  metadataBase: new URL('https://mysweetmagnets.co.uk'),
 } 

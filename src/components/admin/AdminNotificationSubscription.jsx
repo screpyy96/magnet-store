@@ -19,6 +19,8 @@ export default function AdminNotificationSubscription() {
 
   // Verifică sau configurează sistemul de notificări
   useEffect(() => {
+    // Temporarily disabled - notifications will be implemented later
+    /*
     if (!vapidPublicKey) {
       console.log('Obțin cheile de configurare pentru notificări...');
       fetch('/api/setup-notifications')
@@ -37,6 +39,7 @@ export default function AdminNotificationSubscription() {
           setError('Nu s-a putut configura sistemul de notificări.');
         });
     }
+    */
   }, [vapidPublicKey]);
 
   // Verifică dacă utilizatorul este admin
@@ -54,9 +57,12 @@ export default function AdminNotificationSubscription() {
         if (adminStatus === 'true') {
           console.log('Admin status din localStorage: true');
           setIsAdmin(true)
+          // Temporarily disabled - notifications will be implemented later
+          /*
           if (isPushSupported()) {
             await registerServiceWorker()
           }
+          */
         } else {
           // Verifică și la server pentru a fi sigur
           const response = await fetch('/api/check-admin')
@@ -70,9 +76,12 @@ export default function AdminNotificationSubscription() {
           setIsAdmin(data.isAdmin)
           localStorage.setItem(`admin_status_${user.id}`, data.isAdmin.toString())
           
+          // Temporarily disabled - notifications will be implemented later
+          /*
           if (data.isAdmin && isPushSupported()) {
             await registerServiceWorker()
           }
+          */
         }
       } catch (err) {
         console.error('Eroare la verificarea statusului de admin:', err)
@@ -87,6 +96,8 @@ export default function AdminNotificationSubscription() {
 
   // Înregistrează service worker-ul
   const registerServiceWorker = async () => {
+    // Temporarily disabled - notifications will be implemented later
+    /*
     try {
       if (!isPushSupported()) {
         console.log('Notificările push nu sunt suportate în acest browser sau nu sunt configurate.')
@@ -121,10 +132,13 @@ export default function AdminNotificationSubscription() {
       console.error('Eroare la înregistrarea Service Worker:', err)
       setError('Nu s-a putut înregistra service worker-ul.')
     }
+    */
   }
 
   // Creează un abonament nou pentru notificările push
   const subscribeUserToPush = async (registration) => {
+    // Temporarily disabled - notifications will be implemented later
+    /*
     try {
       console.log('Solicit permisiuni pentru notificări...')
       const permission = await Notification.requestPermission()
@@ -158,10 +172,13 @@ export default function AdminNotificationSubscription() {
       console.error('Eroare la abonare:', err)
       setError('Nu s-a putut crea abonamentul pentru notificări.')
     }
+    */
   }
 
   // Trimite abonamentul la server
   const updateSubscriptionOnServer = async (subscription) => {
+    // Temporarily disabled - notifications will be implemented later
+    /*
     try {
       console.log('Trimit abonamentul la server...')
       const response = await fetch('/api/notifications/subscribe-admin', {
@@ -190,6 +207,7 @@ export default function AdminNotificationSubscription() {
       console.error('Eroare la actualizarea abonamentului pe server:', err)
       setError('Nu s-a putut salva abonamentul.')
     }
+    */
   }
 
   // Utilitar pentru convertirea cheii din base64 în Uint8Array

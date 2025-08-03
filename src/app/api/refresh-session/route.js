@@ -4,9 +4,6 @@ import { cookies } from 'next/headers'
 
 export async function POST() {
   try {
-    // Get cookies with proper await
-    const cookieStore = await cookies()
-    
     // Create Supabase client
     const supabase = createClient()
     

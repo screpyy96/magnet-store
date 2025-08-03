@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
@@ -24,22 +25,44 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       
-      // Use the RPC function to get orders with items
-      const { data, error } = await supabase
-        .rpc('get_user_orders_with_items', {
-          user_id: user.id
-        });
+      // Get orders for the user
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
   
-      if (error) throw error;
+      if (ordersError) throw ordersError;
   
-      if (!data || !data.orders) {
-        console.log('No orders data returned');
+      if (!ordersData || ordersData.length === 0) {
+        console.log('No orders found for user');
         setOrders([]);
         return;
       }
   
-      console.log('Orders data:', data.orders);
-      setOrders(data.orders);
+      // Get order items for each order
+      const ordersWithItems = await Promise.all(ordersData.map(async (order) => {
+        const { data: orderItems, error: itemsError } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('order_id', order.id);
+        
+        if (itemsError) {
+          console.error('Error fetching order items:', itemsError);
+          return {
+            ...order,
+            order_items: []
+          };
+        }
+        
+        return {
+          ...order,
+          order_items: orderItems || []
+        };
+      }));
+  
+      console.log('Orders with items:', ordersWithItems);
+      setOrders(ordersWithItems);
     } catch (error) {
       console.error('Error loading orders:', error);
     } finally {
@@ -66,7 +89,7 @@ export default function OrdersPage() {
 
       {orders.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-600">You haven't placed any orders yet.</p>
+          <p className="text-gray-600">You haven&apos;t placed any orders yet.</p>
         </div>
       ) : (
         <div className="space-y-8">
@@ -86,6 +109,7 @@ export default function OrdersPage() {
                     ${order.status === 'processing' ? 'bg-blue-100 text-blue-800' : ''}
                     ${order.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
                     ${order.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
+                    ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
                   `}>
                     {order.status}
                   </span>
@@ -143,19 +167,15 @@ export default function OrdersPage() {
               <div className="border-t border-gray-200 pt-4 mt-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span>£{order.subtotal}</span>
+                  <span>£{order.subtotal?.toFixed(2) || '0.00'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping:</span>
-                  <span>£{order.shipping_cost}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Tax:</span>
-                  <span>£{order.tax}</span>
+                  <span>£{order.shipping_cost?.toFixed(2) || '0.00'}</span>
                 </div>
                 <div className="flex justify-between font-medium mt-2 pt-2 border-t border-gray-200">
                   <span>Total:</span>
-                  <span>£{order.total}</span>
+                  <span>£{order.total?.toFixed(2) || '0.00'}</span>
                 </div>
               </div>
             </div>

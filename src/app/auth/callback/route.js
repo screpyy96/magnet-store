@@ -27,7 +27,7 @@ export async function GET(request) {
     }
 
     // Create Supabase client
-    const supabase = createClient()
+    const supabase = await createClient()
     
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
@@ -42,6 +42,6 @@ export async function GET(request) {
     return NextResponse.redirect(new URL(redirectTo, requestUrl.origin))
   } catch (error) {
     console.error('Auth callback error:', error)
-    return NextResponse.redirect(new URL('/login', requestUrl.origin))
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 } 

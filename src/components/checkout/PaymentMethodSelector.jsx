@@ -2,14 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { Elements } from '@stripe/react-stripe-js'
-import { getStripe } from '@/lib/stripe-client'
-import NewCardForm from './NewCardForm'
 
 export default function PaymentMethodSelector({ selectedPaymentMethod, onPaymentMethodSelect }) {
-  const { user, supabase } = useAuth()
+  const { user } = useAuth()
   const [savedCards, setSavedCards] = useState([])
-  const [showNewCardForm, setShowNewCardForm] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -20,18 +16,36 @@ export default function PaymentMethodSelector({ selectedPaymentMethod, onPayment
 
   const loadSavedCards = async () => {
     try {
-      const { data, error } = await supabase
-        .from('payment_methods')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .order('is_default', { ascending: false })
-
-      if (error) throw error
-      setSavedCards(data)
+      // Simulate loading saved cards
+      const mockCards = [
+        {
+          id: 'card_1',
+          user_id: user.id,
+          brand: 'visa',
+          last4: '4242',
+          exp_month: 12,
+          exp_year: 2025,
+          is_default: true,
+          status: 'active',
+          stripe_payment_method_id: 'pm_mock_1'
+        },
+        {
+          id: 'card_2',
+          user_id: user.id,
+          brand: 'mastercard',
+          last4: '5555',
+          exp_month: 8,
+          exp_year: 2026,
+          is_default: false,
+          status: 'active',
+          stripe_payment_method_id: 'pm_mock_2'
+        }
+      ]
+      
+      setSavedCards(mockCards)
 
       // Auto-select default payment method
-      const defaultCard = data.find(card => card.is_default)
+      const defaultCard = mockCards.find(card => card.is_default)
       if (defaultCard && !selectedPaymentMethod) {
         onPaymentMethodSelect(defaultCard)
       }
@@ -42,13 +56,7 @@ export default function PaymentMethodSelector({ selectedPaymentMethod, onPayment
     }
   }
 
-  const handleNewCardSaved = (newCard) => {
-    setShowNewCardForm(false)
-    setSavedCards([...savedCards, newCard])
-    onPaymentMethodSelect(newCard)
-  }
-
-  const formatCardNumber = (number) => `•••• •••• •••• ${number.slice(-4)}`
+  const formatCardNumber = (number) => `•••• •••• •••• ${number}`
 
   return (
     <div className="bg-white p-6 rounded-lg shadow">
@@ -72,14 +80,14 @@ export default function PaymentMethodSelector({ selectedPaymentMethod, onPayment
                 <div>
                   <div className="flex items-center space-x-2">
                     {card.brand === 'visa' && (
-                      <svg className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-                        {/* Add Visa card SVG here */}
-                      </svg>
+                      <div className="h-8 w-12 bg-blue-600 rounded flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">VISA</span>
+                      </div>
                     )}
                     {card.brand === 'mastercard' && (
-                      <svg className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-                        {/* Add Mastercard SVG here */}
-                      </svg>
+                      <div className="h-8 w-12 bg-red-600 rounded flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">MC</span>
+                      </div>
                     )}
                     <span className="font-medium">{formatCardNumber(card.last4)}</span>
                   </div>
@@ -92,21 +100,11 @@ export default function PaymentMethodSelector({ selectedPaymentMethod, onPayment
             </div>
           ))}
 
-          {showNewCardForm ? (
-            <Elements stripe={getStripe()}>
-              <NewCardForm
-                onSuccess={handleNewCardSaved}
-                onCancel={() => setShowNewCardForm(false)}
-              />
-            </Elements>
-          ) : (
-            <button
-              onClick={() => setShowNewCardForm(true)}
-              className="text-indigo-600 hover:text-indigo-800"
-            >
-              + Add New Card
-            </button>
-          )}
+          <div className="mt-4 p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
+            <p className="text-gray-500 text-sm">
+              💳 Payment processing will be added later with Stripe integration
+            </p>
+          </div>
         </>
       )}
     </div>

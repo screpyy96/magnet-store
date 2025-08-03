@@ -8,10 +8,12 @@ import { selectCartItems, clearCart } from '@/store/slices/cartSlice'
 import AddressSelector from '@/components/checkout/AddressSelector'
 import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector'
 import OrderSummary from '@/components/checkout/OrderSummary'
+import DeliveryInfo from '@/components/custom/DeliveryInfo'
 
 export default function CheckoutPage() {
   const router = useRouter()
   const dispatch = useDispatch()
+
   const cartItems = useSelector(selectCartItems)
   const [selectedAddress, setSelectedAddress] = useState(null)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
@@ -20,7 +22,13 @@ export default function CheckoutPage() {
   const { user, loading, refreshSession, setRedirectAfterLogin } = useAuth()
   
   // Calculate total from cart items
-  const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  const total = cartItems.reduce((sum, item) => {
+    // For packages or items with totalPrice, use that. Otherwise multiply price by quantity
+    const itemTotal = item.totalPrice || (item.price * (item.quantity || 1));
+   
+    return sum + itemTotal;
+  }, 0)
+  
 
   useEffect(() => {
     if (!loading && !user) {
@@ -30,7 +38,8 @@ export default function CheckoutPage() {
     }
 
     if (!loading && cartItems.length === 0) {
-      router.push('/cart')
+      console.log('Cart is empty, redirecting to custom page')
+      router.push('/custom')
       return
     }
   }, [user, loading, cartItems, router])
@@ -53,11 +62,6 @@ export default function CheckoutPage() {
       return
     }
     
-    if (!selectedPaymentMethod.stripe_payment_method_id) {
-      setError('Invalid payment method. Please select a different card or add a new one.')
-      return
-    }
-    
     if (!user || !user.id) {
       setError('You must be logged in to place an order')
       router.push('/login?redirect=/checkout')
@@ -68,19 +72,18 @@ export default function CheckoutPage() {
     setError(null)
 
     try {
-      // No need to refresh session, pass user ID directly
+      // Create order using API
       const response = await fetch('/api/orders/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           items: cartItems,
           total: total,
           shippingAddressId: selectedAddress.id,
           paymentMethodId: selectedPaymentMethod.stripe_payment_method_id,
-          userId: user.id // Pass user ID directly
+          userId: user.id
         }),
       })
 
@@ -90,7 +93,14 @@ export default function CheckoutPage() {
         throw new Error(data.error || 'Failed to create order')
       }
 
-      router.push(`/checkout/payment?payment_intent=${data.paymentIntentId}&order_id=${data.orderId}`)
+      console.log('Order created successfully:', data)
+
+      // Redirect to order confirmation first
+      console.log('Redirecting to confirmation page with order ID:', data.orderId)
+      router.push(`/orders/confirmation?order_id=${data.orderId}`)
+      
+      // Clear cart after redirect
+      dispatch(clearCart())
     } catch (err) {
       console.error('Error creating order:', err)
       setError(err.message)
@@ -112,6 +122,8 @@ export default function CheckoutPage() {
             selectedPaymentMethod={selectedPaymentMethod}
             onPaymentMethodSelect={setSelectedPaymentMethod}
           />
+          
+          <DeliveryInfo />
         </div>
 
         <div className="lg:pl-8">

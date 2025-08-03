@@ -11,6 +11,8 @@ export default function NotificationsPanel() {
 
   // Încarcă notificările
   useEffect(() => {
+    // Temporarily disabled - notifications will be implemented later
+    /*
     const fetchNotifications = async () => {
       const { data, error } = await supabase
         .from('admin_notifications')
@@ -42,10 +44,13 @@ export default function NotificationsPanel() {
     return () => {
       subscription.unsubscribe();
     };
+    */
   }, []);
 
   // Marchează notificarea ca citită
   const markAsRead = async (id) => {
+    // Temporarily disabled - notifications will be implemented later
+    /*
     await supabase
       .from('admin_notifications')
       .update({ read: true })
@@ -55,6 +60,7 @@ export default function NotificationsPanel() {
       n.id === id ? { ...n, read: true } : n
     ));
     setUnreadCount(count => Math.max(0, count - 1));
+    */
   };
 
   return (
@@ -62,13 +68,15 @@ export default function NotificationsPanel() {
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-600 hover:text-amber-500 transition-colors"
+        title="Notificări (vor fi implementate în curând)"
       >
         <Bell className="h-6 w-6" />
-        {unreadCount > 0 && (
+        {/* Temporarily disabled - notifications will be implemented later */}
+        {/* {unreadCount > 0 && (
           <span className="absolute top-0 right-0 h-5 w-5 flex items-center justify-center rounded-full bg-pink-500 text-white text-xs">
             {unreadCount}
           </span>
-        )}
+        )} */}
       </button>
 
       {isOpen && (
@@ -77,6 +85,11 @@ export default function NotificationsPanel() {
             Notificări
           </div>
           <div className="max-h-80 overflow-y-auto">
+            {/* Temporarily disabled - notifications will be implemented later */}
+            <div className="p-4 text-center text-gray-500">
+              Notificările vor fi implementate în curând...
+            </div>
+            {/*
             {notifications.length > 0 ? (
               <ul>
                 {notifications.map(notification => (
@@ -112,6 +125,7 @@ export default function NotificationsPanel() {
                 Nu există notificări
               </div>
             )}
+            */}
           </div>
         </div>
       )}

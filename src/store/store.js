@@ -1,7 +1,7 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit'
 import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
-import cartReducer from './cartSlice'
+import cartReducer from './slices/cartSlice'
 
 // Configurare pentru a gestiona erorile de stocare
 const createNoopStorage = () => {
@@ -112,7 +112,9 @@ const persistConfig = {
   whitelist: ['cart'], // Only cart is persisted
   transforms: [createDataTransform()],
   // Add throttle to prevent excessive writes
-  throttle: 1000
+  throttle: 1000,
+  // Temporarily disable persistence for debugging
+  enabled: false
 }
 
 const rootReducer = combineReducers({

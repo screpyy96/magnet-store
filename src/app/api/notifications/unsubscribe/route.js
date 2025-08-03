@@ -1,54 +1,50 @@
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export async function POST(request) {
   try {
     const { endpoint } = await request.json()
+    
+    if (!endpoint) {
+      return NextResponse.json(
+        { error: 'Endpoint is required' },
+        { status: 400 }
+      )
+    }
 
     // Create Supabase client
-    const supabase = createClient()
+    const supabase = await createClient()
+
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    // Verifică autentificarea
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
+    if (userError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
-    
-    // Obține datele din request
-    const { subscription } = await request.json()
-    
-    if (!subscription) {
-      return NextResponse.json(
-        { error: 'No subscription data provided' },
-        { status: 400 }
-      )
-    }
-    
-    // Șterge abonamentul din baza de date
+
+    // Delete the subscription from the database
     const { error } = await supabase
       .from('push_subscriptions')
       .delete()
-      .eq('user_id', session.user.id)
-      .eq('subscription->endpoint', subscription.endpoint)
-    
+      .eq('user_id', user.id)
+      .eq('endpoint', endpoint)
+
     if (error) {
-      console.error('Error deleting subscription:', error)
+      console.error('Database error:', error)
       return NextResponse.json(
-        { error: 'Failed to delete subscription' },
+        { error: 'Failed to unsubscribe' },
         { status: 500 }
       )
     }
-    
+
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Unsubscription error:', error)
+    console.error('Unsubscribe error:', error)
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

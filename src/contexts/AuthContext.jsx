@@ -117,18 +117,44 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const { data: adminStatus, error } = await supabase.rpc('get_user_admin_status', {
-        user_id: userId
-      });
+      // Check admin status directly from profiles table instead of using RPC function
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .single();
 
       if (error) {
+        // If profile doesn't exist, create it
+        if (error.code === 'PGRST116') {
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              email: user?.email || '',
+              is_admin: false
+            });
+          
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+            setIsAdmin(false);
+            return;
+          }
+          
+          // Set admin status to false for new profile
+          safeLocalStorage.setItem(`admin_status_${userId}`, 'false');
+          setIsAdmin(false);
+          return;
+        }
         throw error;
       }
 
       // Cache and set the admin status
+      const adminStatus = profile?.is_admin || false;
       safeLocalStorage.setItem(`admin_status_${userId}`, adminStatus.toString());
       setIsAdmin(adminStatus);
     } catch (error) {
+      console.error('Error checking admin status:', error);
       // Only update state if we don't have a cached value
       if (cachedAdminStatus === null) {
         setIsAdmin(false);

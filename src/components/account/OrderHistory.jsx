@@ -25,7 +25,7 @@ export default function OrderHistory() {
       // Obține comenzile utilizatorului
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select('id, created_at, status, total_price, shipping_cost')
+        .select('id, created_at, status, total, shipping_cost')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
@@ -49,7 +49,7 @@ export default function OrderHistory() {
         return {
           ...order,
           items: orderItems || [],
-          total: order.total_price || 0,
+          total: order.total || 0,
           date: new Date(order.created_at).toLocaleDateString()
         };
       }));
@@ -75,6 +75,8 @@ export default function OrderHistory() {
         return 'bg-red-100 text-red-800';
       case 'paid':
         return 'bg-purple-100 text-purple-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -157,7 +159,7 @@ export default function OrderHistory() {
                       Quantity: {item.quantity}
                     </p>
                     <p className="mt-1 text-sm font-medium text-gray-900">
-                      £{(item.price).toFixed(2)}
+                      £{(item.price_per_unit || item.price || 0).toFixed(2)}
                     </p>
                   </div>
                 </div>

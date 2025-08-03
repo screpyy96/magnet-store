@@ -5,11 +5,18 @@ import webpush from 'web-push';
 
 export async function POST(request) {
   try {
+    // Temporarily disabled - notifications will be implemented later
+    return NextResponse.json(
+      { success: true, message: 'Notifications temporarily disabled' },
+      { status: 200 }
+    );
+    
+    /*
     console.log('Processing notification request');
     
     // 1. Check if VAPID keys are configured
-    if (!process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-      console.log('VAPID Private Key exists:', !!process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY);
+    if (!process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+      console.log('VAPID Private Key exists:', !!process.env.VAPID_PRIVATE_KEY);
       return NextResponse.json(
         { error: 'Web Push not configured' },
         { status: 500 }
@@ -18,9 +25,9 @@ export async function POST(request) {
 
     // 2. Set up VAPID details for web push
     webpush.setVapidDetails(
-      'mailto:' + process.env.NEXT_PUBLIC_WEB_PUSH_EMAIL,
+      'mailto:' + process.env.WEB_PUSH_EMAIL,
       process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-      process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY
+      process.env.VAPID_PRIVATE_KEY
     );
 
     // 3. Get notification data from request
@@ -86,6 +93,7 @@ export async function POST(request) {
       { success: true, count: subscriptions.length },
       { status: 200 }
     );
+    */
   } catch (error) {
     console.error('Error in send-notification route:', error);
     return NextResponse.json(

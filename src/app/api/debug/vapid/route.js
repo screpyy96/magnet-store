@@ -9,9 +9,9 @@ export async function GET() {
         `${process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY.substring(0, 10)}...` : null
     },
     vapidPrivateKey: {
-      exists: !!process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY,
-      value: process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY ? 
-        `${process.env.NEXT_PUBLIC_VAPID_PRIVATE_KEY.substring(0, 5)}...` : null
+      exists: !!process.env.VAPID_PRIVATE_KEY,
+      value: process.env.VAPID_PRIVATE_KEY ? 
+        `${process.env.VAPID_PRIVATE_KEY.substring(0, 5)}...` : null
     },
     webPushEmail: process.env.WEB_PUSH_EMAIL || 'default@example.com',
     envVars: Object.keys(process.env)

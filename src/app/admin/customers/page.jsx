@@ -6,13 +6,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
-export default function OrdersManagement() {
+export default function CustomersManagement() {
   const { user, supabase } = useAuth()
   const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [orders, setOrders] = useState([])
-  const [filter, setFilter] = useState('all')
+  const [customers, setCustomers] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [pagination, setPagination] = useState({
     page: 1,
@@ -23,7 +22,7 @@ export default function OrdersManagement() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/login?redirect=/admin/orders')
+      router.push('/login?redirect=/admin/customers')
       return
     }
 
@@ -38,7 +37,7 @@ export default function OrdersManagement() {
           .from('profiles')
           .select('is_admin')
           .eq('id', user.id)
-          .maybeSingle() // Folosim maybeSingle în loc de single
+          .maybeSingle()
         
         if (profileError) {
           console.error('Error checking profile:', profileError)
@@ -78,9 +77,9 @@ export default function OrdersManagement() {
           return
         }
         
-        console.log('User is admin, loading orders')
+        console.log('User is admin, loading customers')
         setIsAdmin(true)
-        await loadOrders()
+        await loadCustomers()
       } catch (error) {
         console.error('Error checking admin status:', error)
         setIsAdmin(false)
@@ -91,31 +90,26 @@ export default function OrdersManagement() {
     }
 
     checkAdminStatus()
-  }, [user, router, filter, searchTerm, pagination.page, supabase])
+  }, [user, router, searchTerm, pagination.page, supabase])
 
-  const loadOrders = async () => {
+  const loadCustomers = async () => {
     try {
       setLoading(true);
       
-      // Build query for orders
+      // Build query for customers (profiles)
       let query = supabase
-        .from('orders')
+        .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
-      // Apply filters
-      if (filter !== 'all') {
-        query = query.eq('status', filter);
-      }
-      
-      // Apply search - only search by order ID for now
+      // Apply search
       if (searchTerm) {
-        query = query.ilike('id', `%${searchTerm}%`);
+        query = query.or(`email.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`);
       }
       
       // Get total count first
       const { count, error: countError } = await supabase
-        .from('orders')
+        .from('profiles')
         .select('*', { count: 'exact', head: true });
       
       if (countError) throw countError;
@@ -125,40 +119,40 @@ export default function OrdersManagement() {
       const to = from + pagination.pageSize - 1;
       query = query.range(from, to);
       
-      const { data: ordersData, error } = await query;
+      const { data: customersData, error } = await query;
   
       if (error) throw error;
   
-      console.log('Orders loaded:', ordersData);
+      console.log('Customers loaded:', customersData);
       
-      // Get user profiles for the orders
-      if (ordersData && ordersData.length > 0) {
-        const userIds = [...new Set(ordersData.map(order => order.user_id))];
+      // Get order counts for each customer
+      if (customersData && customersData.length > 0) {
+        const customerIds = customersData.map(customer => customer.id);
         
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, email')
-          .in('id', userIds);
+        const { data: orderCounts, error: orderError } = await supabase
+          .from('orders')
+          .select('user_id')
+          .in('user_id', customerIds);
         
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
+        if (orderError) {
+          console.error('Error fetching order counts:', orderError);
         } else {
-          // Create a map of user_id to profile
-          const profilesMap = {};
-          profilesData?.forEach(profile => {
-            profilesMap[profile.id] = profile;
+          // Count orders per customer
+          const orderCountMap = {};
+          orderCounts?.forEach(order => {
+            orderCountMap[order.user_id] = (orderCountMap[order.user_id] || 0) + 1;
           });
           
-          // Add profile data to orders
-          const ordersWithProfiles = ordersData.map(order => ({
-            ...order,
-            profiles: profilesMap[order.user_id] || null
+          // Add order count to customers
+          const customersWithOrders = customersData.map(customer => ({
+            ...customer,
+            orderCount: orderCountMap[customer.id] || 0
           }));
           
-          setOrders(ordersWithProfiles);
+          setCustomers(customersWithOrders);
         }
       } else {
-        setOrders(ordersData || []);
+        setCustomers(customersData || []);
       }
       
       setPagination({
@@ -167,66 +161,28 @@ export default function OrdersManagement() {
         totalPages: Math.ceil((count || 0) / pagination.pageSize)
       });
     } catch (error) {
-      console.error('Error loading orders:', error);
-      // Show error to user
-      alert('Eroare la încărcarea comenzilor: ' + error.message);
+      console.error('Error loading customers:', error);
+      alert('Eroare la încărcarea clienților: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusChange = async (orderId, newStatus) => {
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', orderId)
-      
-      if (error) throw error
-      
-      // Actualizează lista local
-      setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      ))
-      
-      alert(`Status-ul comenzii #${orderId} a fost actualizat la ${newStatus}`)
-    } catch (error) {
-      console.error('Error updating order status:', error)
-      alert('A apărut o eroare la actualizarea statusului.')
-    }
-  }
-
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'paid':
-        return 'bg-green-100 text-green-800'
-      case 'shipped':
-        return 'bg-blue-100 text-blue-800'
-      case 'completed':
-        return 'bg-indigo-100 text-indigo-800'
-      case 'cancelled':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString)
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
-  const handleFilterChange = (e) => {
-    setFilter(e.target.value)
+  const getStatusBadgeClass = (isAdmin) => {
+    return isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
   }
 
   useEffect(() => {
     if (isAdmin) {
-      loadOrders()
+      loadCustomers()
     }
-  }, [filter, searchTerm, pagination.page, isAdmin])
+  }, [searchTerm, pagination.page, isAdmin])
 
   if (loading) {
     return (
@@ -244,9 +200,9 @@ export default function OrdersManagement() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Manage and process customer orders
+            Manage customer accounts and view their information
           </p>
         </div>
         <div className="mt-4 md:mt-0">
@@ -262,61 +218,42 @@ export default function OrdersManagement() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Search */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:space-x-4">
-          <div className="mb-4 md:mb-0">
-            <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
-              Filter by Status
-            </label>
-            <select
-              id="status-filter"
-              value={filter}
-              onChange={handleFilterChange}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-            >
-              <option value="all">All Orders</option>
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-              <option value="shipped">Shipped</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="search-term" className="block text-sm font-medium text-gray-700 mb-1">
-              Search by ID or Email
-            </label>
-            <input
-              id="search-term"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-            />
-          </div>
+        <div>
+          <label htmlFor="search-term" className="block text-sm font-medium text-gray-700 mb-1">
+            Search by Email or Name
+          </label>
+          <input
+            id="search-term"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search customers..."
+            className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+          />
         </div>
       </div>
 
-      {/* Orders Table */}
+      {/* Customers Table */}
       <div className="bg-white shadow overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Order ID
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Customer
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
+                  Email
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Orders
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Joined
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -324,39 +261,64 @@ export default function OrdersManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {orders.length === 0 ? (
+              {customers.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
-                    No orders found
+                    No customers found
                   </td>
                 </tr>
               ) : (
-                orders.map((order) => (
-                  <tr key={order.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {order.id.substring(0, 8)}...
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {order.profiles?.email || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(order.created_at)}
+                customers.map((customer) => (
+                  <tr key={customer.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                            <span className="text-indigo-600 font-medium text-sm">
+                              {customer.full_name ? customer.full_name.charAt(0).toUpperCase() : customer.email.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {customer.full_name || 'No name provided'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            ID: {customer.id.substring(0, 8)}...
+                          </div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      £{order.total?.toFixed(2) || '0.00'}
+                      {customer.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(order.status)}`}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(customer.is_admin)}`}>
+                        {customer.is_admin ? 'Admin' : 'Customer'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {customer.orderCount || 0} orders
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(customer.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="text-indigo-600 hover:text-indigo-900"
+                        href={`/admin/orders?customer=${customer.id}`}
+                        className="text-indigo-600 hover:text-indigo-900 mr-4"
                       >
-                        View
+                        View Orders
                       </Link>
+                      <button
+                        onClick={() => {
+                          // TODO: Implement customer details modal
+                          alert('Customer details feature coming soon!');
+                        }}
+                        className="text-gray-600 hover:text-gray-900"
+                      >
+                        Details
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -387,7 +349,7 @@ export default function OrdersManagement() {
         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-gray-700">
-              Afișare <span className="font-medium">{orders.length > 0 ? (pagination.page - 1) * pagination.pageSize + 1 : 0}</span> - <span className="font-medium">{Math.min(pagination.page * pagination.pageSize, pagination.totalCount)}</span> din <span className="font-medium">{pagination.totalCount}</span> rezultate
+              Afișare <span className="font-medium">{customers.length > 0 ? (pagination.page - 1) * pagination.pageSize + 1 : 0}</span> - <span className="font-medium">{Math.min(pagination.page * pagination.pageSize, pagination.totalCount)}</span> din <span className="font-medium">{pagination.totalCount}</span> rezultate
             </p>
           </div>
           <div>

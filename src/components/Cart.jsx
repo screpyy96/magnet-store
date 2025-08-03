@@ -66,57 +66,79 @@ export default function Cart() {
   const handleClearAll = () => {
     dispatch(clearCart())
     safeLocalStorage.removeItem('customMagnetImages')
+    safeLocalStorage.removeItem('persist:root')
     showToast('Cart cleared', 'success')
   }
 
   // Smart Package Grouping Logic
   const groupItemsByPackage = (items) => {
-    const packageGroups = {};
+    const groupedItems = [];
     
     items.forEach((item, index) => {
       try {
-        const customData = JSON.parse(item.custom_data || '{}');
-        const packageId = customData.packageId || '1';
-        const packageName = customData.packageName || 'Individual Items';
-        const packagePrice = customData.packagePrice || item.price;
+        const customData = item.custom_data ? JSON.parse(item.custom_data) : {};
         
-        if (!packageGroups[packageId]) {
-          packageGroups[packageId] = {
-            packageId,
-            packageName,
-            packagePrice,
-            items: [],
-            totalCount: 0,
-            totalPrice: 0
+        if (customData.type === 'custom_magnet_package' || customData.isPackage === true) {
+          // This is a package item
+          const thumbnails = customData.thumbnails || item.images || [];
+          const packageId = customData.packageId || customData.packageSize;
+          const packageItem = {
+            ...item,
+            id: item.id,
+            name: customData.packageName || item.name || 'Custom Magnet Package',
+            price: item.price || 0,
+            quantity: item.quantity || 1,
+            totalPrice: item.totalPrice || item.price || 0,
+            isPackage: true,
+            packageId: packageId,
+            packageSize: parseInt(packageId) || thumbnails.length,
+            images: thumbnails,
+            size: customData.size || '5x5',
+            finish: customData.finish || 'flexible',
+            originalIndex: index
           };
+          groupedItems.push(packageItem);
+        } else {
+          // Single item or regular product
+          const imageUrl = getCartItemImage(item);
+          groupedItems.push({
+            ...item,
+            originalIndex: index,
+            isPackage: false,
+            images: imageUrl ? [imageUrl] : [],
+            quantity: item.quantity || 1,
+            totalPrice: item.totalPrice || item.price
+          });
         }
-        
-        packageGroups[packageId].items.push({ ...item, originalIndex: index });
-        packageGroups[packageId].totalCount += item.quantity;
-        packageGroups[packageId].totalPrice += item.price * item.quantity;
       } catch (e) {
-        // Handle items without custom_data
-        const packageId = 'single';
-        if (!packageGroups[packageId]) {
-          packageGroups[packageId] = {
-            packageId: 'single',
-            packageName: 'Individual Items',
-            packagePrice: 0,
-            items: [],
-            totalCount: 0,
-            totalPrice: 0
-          };
-        }
-        packageGroups[packageId].items.push({ ...item, originalIndex: index });
-        packageGroups[packageId].totalCount += item.quantity;
-        packageGroups[packageId].totalPrice += item.price * item.quantity;
+        console.error('Error processing cart item:', e);
+        // Fallback for items that fail parsing
+        groupedItems.push({
+          ...item,
+          originalIndex: index,
+          isPackage: false,
+          images: [],
+          quantity: item.quantity || 1,
+          totalPrice: item.totalPrice || item.price
+        });
       }
     });
-
-    return Object.values(packageGroups);
+    
+    return groupedItems;
   };
 
-  const packageGroups = groupItemsByPackage(items);
+  const groupedItems = groupItemsByPackage(items);
+  
+
+  
+
+  
+  // Numărăm câte pachete avem în coș
+  const packageCount = groupedItems.filter(item => item.isPackage).length;
+  // Numărăm câte articole individuale avem în coș
+  const singleItemCount = groupedItems.filter(item => !item.isPackage).length;
+  // Totalul afișat va fi numărul de pachete + numărul de articole individuale
+  const totalUniqueItems = packageCount + singleItemCount;
 
   return (
     <>
@@ -140,9 +162,9 @@ export default function Cart() {
           <svg className="h-6 w-6 text-gray-700 group-hover:text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
-          {isClient && items.length > 0 && (
+          {isClient && totalUniqueItems > 0 && (
             <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {items.length}
+              {totalUniqueItems}
             </span>
           )}
         </button>
@@ -199,149 +221,163 @@ export default function Cart() {
                     </div>
                   ) : (
                     <div className="p-4 space-y-4">
-                      {packageGroups.map((packageGroup) => (
-                        <div key={packageGroup.packageId} className="space-y-3">
-                          {/* Package Header for multi-item packages */}
-                          {parseInt(packageGroup.packageId) > 1 && (
-                            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200">
-                              <div className="flex items-center justify-between">
+                      {groupedItems.map((item, index) => (
+                        <div key={item.id || `item-${index}`} className="space-y-3">
+                          {/* Package Item */}
+                          {item.isPackage ? (
+                            <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-3 border border-pink-200">
+                              <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center space-x-2">
-                                  <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                                    <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <div className="p-2 bg-pink-100 rounded-lg">
+                                    <svg className="w-5 h-5 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                     </svg>
                                   </div>
                                   <div>
-                                    <h4 className="text-sm font-semibold text-indigo-900">
-                                      {packageGroup.packageName}
+                                    <h4 className="text-sm font-semibold text-gray-900">
+                                      {item.name}
                                     </h4>
-                                    <p className="text-xs text-indigo-600">
-                                      {packageGroup.totalCount} magnets • £{packageGroup.totalPrice.toFixed(2)}
+                                    <p className="text-xs text-gray-600">
+                                      {item.images.length} of {item.packageSize} magnets • {item.size}cm • {item.finish}
                                     </p>
                                   </div>
                                 </div>
                                 
-                                {/* Package Savings */}
-                                {(() => {
-                                  const individualPrice = 5.00;
-                                  const totalIndividualPrice = packageGroup.totalCount * individualPrice;
-                                  const savings = totalIndividualPrice - packageGroup.totalPrice;
-                                  
-                                  if (savings > 0) {
-                                    return (
-                                      <div className="text-right">
-                                        <div className="text-xs text-gray-500 line-through">
-                                          £{totalIndividualPrice.toFixed(2)}
-                                        </div>
-                                        <div className="text-xs font-medium text-green-600">
-                                          Save £{savings.toFixed(2)}
-                                        </div>
-                                      </div>
-                                    );
-                                  }
-                                  return null;
-                                })()}
+                                {/* Remove button */}
+                                <button
+                                  onClick={() => handleRemove(item.originalIndex)}
+                                  className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                  aria-label="Remove package"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
                               </div>
                               
-                              {/* Progress bar for incomplete packages */}
-                              <div className="mt-2 flex items-center space-x-2">
-                                <div className="flex-1 bg-indigo-200 rounded-full h-1.5">
-                                  <div 
-                                    className="bg-indigo-600 h-1.5 rounded-full transition-all duration-300"
-                                    style={{ width: `${(packageGroup.totalCount / parseInt(packageGroup.packageId)) * 100}%` }}
-                                  />
+                              {/* Package Images Grid */}
+                              <div className="grid grid-cols-3 gap-2 mb-3">
+                                {Array.from({ length: item.packageSize }).map((_, idx) => {
+                                  const imageUrl = item.images[idx];
+                                  return (
+                                    <div key={idx} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                                      {imageUrl ? (
+                                        <img 
+                                          src={imageUrl} 
+                                          alt={`Magnet ${idx + 1}`} 
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                          <svg className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                          </svg>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              
+                              {/* Package Price and Progress */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  {item.images.length < item.packageSize && (
+                                    <div className="flex items-center space-x-1 text-xs text-amber-600">
+                                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                      </svg>
+                                      <span>Add {item.packageSize - item.images.length} more images</span>
+                                    </div>
+                                  )}
+                                  {item.images.length === item.packageSize && (
+                                    <div className="flex items-center space-x-1 text-xs text-green-600">
+                                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                      <span>Package complete</span>
+                                    </div>
+                                  )}
                                 </div>
-                                <span className="text-xs text-indigo-600">
-                                  {packageGroup.totalCount}/{packageGroup.packageId}
+                                <span className="text-sm font-semibold text-gray-900">
+                                  £{(item.price || 0).toFixed(2)}
                                 </span>
                               </div>
                             </div>
-                          )}
-                          
-                          {/* Individual Items */}
-                          <div className="space-y-2">
-                            {packageGroup.items.map((item) => (
-                              <motion.div
-                                key={item.originalIndex}
-                                className="flex items-center space-x-3 bg-gray-50/80 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, x: -100 }}
-                              >
-                                <div className="w-12 h-12 relative rounded-md overflow-hidden border border-gray-200 bg-white shrink-0">
-                                  {(() => {
-                                    const imageUrl = getCartItemImage(item);
-                                    return imageUrl ? (
-                                      <Image
-                                        src={imageUrl}
-                                        alt={item.name || "Product"}
-                                        fill
-                                        sizes="48px"
-                                        className="object-cover"
-                                        onError={(e) => {
-                                          e.target.src = "/placeholder-magnet.png";
-                                        }}
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500 text-xs text-center p-1">
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
-                                
-                                <div className="flex-grow min-w-0">
-                                  <h4 className="text-sm font-medium text-gray-900 truncate">{item.name}</h4>
-                                  <p className="text-xs text-gray-500">
-                                    {(() => {
-                                      try {
-                                        const customData = JSON.parse(item.custom_data || '{}');
-                                        return `${customData.size || '5x5'}cm • ${customData.finish || 'Flexible'}`;
-                                      } catch {
-                                        return 'Custom magnet';
-                                      }
-                                    })()}
-                                  </p>
-                                  <div className="flex items-center justify-between mt-1">
-                                    <div className="flex items-center">
-                                      <button
-                                        onClick={() => handleDecrement(item.originalIndex, item.quantity)}
-                                        className="w-6 h-6 rounded-l-md border border-gray-300 flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors"
-                                      >
-                                        <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                                        </svg>
-                                      </button>
-                                      <span className="w-8 h-6 border-y border-gray-300 text-center text-xs flex items-center justify-center bg-white">
-                                        {item.quantity}
-                                      </span>
-                                      <button
-                                        onClick={() => handleIncrement(item.originalIndex, item.quantity)}
-                                        className="w-6 h-6 rounded-r-md border border-gray-300 flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors"
-                                      >
-                                        <svg className="w-3 h-3 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <p className="text-sm font-semibold whitespace-nowrap">£{(item.price * item.quantity).toFixed(2)}</p>
-                                      <button
-                                        onClick={() => handleRemove(item.originalIndex)}
-                                        className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-full transition-colors"
-                                      >
-                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                      </button>
-                                    </div>
+                          ) : (
+                            /* Single Item */
+                            <motion.div
+                              className="flex items-center space-x-3 bg-gray-50/80 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, x: -10 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              {/* Item image */}
+                              <div className="relative w-16 h-16 bg-white rounded-md overflow-hidden border border-gray-200">
+                                {item.images && item.images[0] ? (
+                                  <Image
+                                    src={item.images[0]}
+                                    alt={item.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="64px"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
                                   </div>
+                                )}
+                              </div>
+                              
+                              {/* Item details */}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-medium text-gray-900 truncate">
+                                  {item.name || 'Custom Magnet'}
+                                </h4>
+                                <p className="text-sm text-gray-500">
+                                  £{item.price?.toFixed(2) || '0.00'}
+                                  {item.quantity > 1 && ` × ${item.quantity}`}
+                                </p>
+                              </div>
+                              
+                              {/* Quantity controls for regular items */}
+                              {!item.custom_data && (
+                                <div className="flex items-center space-x-1">
+                                  <button
+                                    onClick={() => handleDecrement(item.originalIndex, item.quantity)}
+                                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                                    </svg>
+                                  </button>
+                                  <span className="text-sm font-medium w-8 text-center">{item.quantity}</span>
+                                  <button
+                                    onClick={() => handleIncrement(item.originalIndex, item.quantity)}
+                                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                  </button>
                                 </div>
-                              </motion.div>
-                            ))}
-                          </div>
+                              )}
+                              
+                              {/* Remove button */}
+                              <button
+                                onClick={() => handleRemove(item.originalIndex)}
+                                className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                aria-label="Remove item"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </motion.div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -352,10 +388,39 @@ export default function Cart() {
                   <div className="p-4 border-t border-gray-200 bg-white sticky bottom-0">
                     {/* Total Savings Display */}
                     {(() => {
-                      const individualPrice = 5.00;
-                      const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-                      const totalIndividualPrice = totalItems * individualPrice;
-                      const totalSavings = totalIndividualPrice - totalAmount;
+                                            const individualPrice = 5.00;
+                      let totalMagnets = 0;
+                      
+                 
+                      
+                      // Count actual magnets (for packages, count the package size)
+                      items.forEach(item => {
+                        try {
+                          const customData = item.custom_data ? JSON.parse(item.custom_data) : {};
+                          if (customData.type === 'custom_magnet_package' || customData.isPackage === true) {
+                            const packageId = customData.packageId || customData.packageSize;
+                            const magnetsInPackage = parseInt(packageId) || 0;
+                            totalMagnets += magnetsInPackage;
+                            console.log(`Package ${item.id}: ${magnetsInPackage} magnets`);
+                          } else {
+                            totalMagnets += item.quantity || 1;
+                            console.log(`Single item ${item.id}: ${item.quantity || 1} magnets`);
+                          }
+                        } catch {
+                          totalMagnets += item.quantity || 1;
+                          console.log(`Fallback item ${item.id}: ${item.quantity || 1} magnets`);
+                        }
+                      });
+                      
+                      const totalIndividualPrice = totalMagnets * individualPrice;
+                      const totalSavings = totalIndividualPrice - (isNaN(totalAmount) ? 0 : totalAmount || 0);
+                      
+                      console.log('Savings calculation:', {
+                        totalMagnets,
+                        totalIndividualPrice,
+                        totalAmount,
+                        totalSavings
+                      });
                       
                       if (totalSavings > 0) {
                         return (
@@ -372,7 +437,7 @@ export default function Cart() {
                     
                     <div className="flex justify-between items-center mb-4">
                       <span className="text-gray-600">Total:</span>
-                      <span className="text-xl font-semibold text-gray-900">£{totalAmount.toFixed(2)}</span>
+                      <span className="text-xl font-semibold text-gray-900">£{(isNaN(totalAmount) ? 0 : totalAmount || 0).toFixed(2)}</span>
                     </div>
                     <button
                       onClick={handleCheckout}

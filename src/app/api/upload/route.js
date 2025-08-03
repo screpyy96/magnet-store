@@ -106,7 +106,7 @@ export async function POST(request) {
     
     // Încărcăm imaginea în bucket
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .storage
         .from('magnet-images')
         .upload(fileName, imageBuffer, {
