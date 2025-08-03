@@ -19,6 +19,7 @@ export default function CheckoutPage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [justPlacedOrder, setJustPlacedOrder] = useState(false)
   const { user, loading, refreshSession, setRedirectAfterLogin } = useAuth()
   
   // Calculate total from cart items
@@ -37,12 +38,12 @@ export default function CheckoutPage() {
       return
     }
 
-    if (!loading && cartItems.length === 0) {
+    if (!loading && cartItems.length === 0 && !justPlacedOrder) {
       console.log('Cart is empty, redirecting to custom page')
       router.push('/custom')
       return
     }
-  }, [user, loading, cartItems, router])
+  }, [user, loading, cartItems, router, justPlacedOrder])
 
   if (loading) {
     return (
@@ -95,12 +96,16 @@ export default function CheckoutPage() {
 
       console.log('Order created successfully:', data)
 
-      // Redirect to order confirmation first
-      console.log('Redirecting to confirmation page with order ID:', data.orderId)
-      router.push(`/orders/confirmation?order_id=${data.orderId}`)
+      // Set flag to prevent redirect
+      setJustPlacedOrder(true)
       
-      // Clear cart after redirect
+      // Clear cart first
       dispatch(clearCart())
+      
+      // Then redirect to confirmation page
+      console.log('Redirecting to confirmation page with order ID:', data.orderId)
+      router.push(`/orders/confirmation?order_id=${data.orderId}&from_confirmation=true`)
+      
     } catch (err) {
       console.error('Error creating order:', err)
       setError(err.message)
