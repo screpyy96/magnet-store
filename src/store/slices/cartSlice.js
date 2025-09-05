@@ -10,8 +10,9 @@ const cartSlice = createSlice({
   name: 'cart',
   initialState,
   reducers: {
-    addItem(state, action) {
-      const newItem = action.payload;
+    addItem: (state, action) => {
+      const { stripePriceId, ...itemData } = action.payload;
+      const newItem = { ...itemData, stripePriceId };
       console.log('Redux addItem received:', {
         id: newItem.id,
         name: newItem.name,
@@ -49,8 +50,11 @@ const cartSlice = createSlice({
           // Replace existing package
           const finalPrice = parseFloat(newItem.price) || 0;
           console.log('Replacing existing package with price:', finalPrice);
+          const existingItem = state.items[existingPackageIndex];
           state.items[existingPackageIndex] = {
+            ...existingItem,
             ...newItem,
+            stripePriceId: newItem.stripePriceId || existingItem.stripePriceId,
             price: finalPrice,
             quantity: 1,
             totalPrice: finalPrice
@@ -61,6 +65,7 @@ const cartSlice = createSlice({
           console.log('Adding new package with price:', finalPrice);
           state.items.push({
             ...newItem,
+            stripePriceId: newItem.stripePriceId,
             price: finalPrice,
             quantity: 1,
             totalPrice: finalPrice
@@ -70,6 +75,7 @@ const cartSlice = createSlice({
         // Single custom magnets - always add as separate items
         state.items.push({
           ...newItem,
+          stripePriceId: newItem.stripePriceId,
           quantity: 1,
           totalPrice: parseFloat(newItem.price) || 0
         });
@@ -82,13 +88,16 @@ const cartSlice = createSlice({
         
         if (existingItemIndex >= 0) {
           // Update quantity for existing item
-          state.items[existingItemIndex].quantity += 1;
-          state.items[existingItemIndex].totalPrice = 
-            state.items[existingItemIndex].price * state.items[existingItemIndex].quantity;
+          const existingItem = state.items[existingItemIndex];
+          existingItem.quantity += 1;
+          existingItem.totalPrice = existingItem.price * existingItem.quantity;
+          // Ensure stripePriceId is preserved
+          existingItem.stripePriceId = newItem.stripePriceId || existingItem.stripePriceId;
         } else {
           // Add new item
           state.items.push({
             ...newItem,
+            stripePriceId: newItem.stripePriceId,
             quantity: 1,
             totalPrice: parseFloat(newItem.price) || 0
           });

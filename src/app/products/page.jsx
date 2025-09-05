@@ -17,6 +17,7 @@ export default function ProductsPage() {
       features: ['5cm × 5cm square', 'Flexible vinyl finish', 'Strong magnetic hold', 'Weather resistant'],
       image: '/images/magnet1.jpeg',
       price: '5.00',
+      stripePriceId: 'price_1Rs6NS00GVx7y3HkUSrAwqOk',
       link: '/custom?qty=1',
       category: 'single',
       badge: 'Most Popular',
@@ -31,6 +32,7 @@ export default function ProductsPage() {
       image: '/images/magnet2.jpeg',
       price: '17.00',
       originalPrice: '30.00',
+      stripePriceId: 'price_1Rs6FA00GVx7y3Hkute2kqYV',
       link: '/custom?qty=6',
       category: 'bundle',
       badge: 'Popular Choice',
@@ -44,6 +46,7 @@ export default function ProductsPage() {
       image: '/images/magnet3.jpeg',
       price: '23.00',
       originalPrice: '45.00',
+      stripePriceId: 'price_1Rs6Ia00GVx7y3HkawawVAry',
       link: '/custom?qty=9',
       category: 'bundle',
       badge: 'Best Value',
@@ -57,6 +60,7 @@ export default function ProductsPage() {
       image: '/images/magnet4.jpeg',
       price: '28.00',
       originalPrice: '60.00',
+      stripePriceId: 'price_1Rs6Nw00GVx7y3HkQ27NdFu7',
       link: '/custom?qty=12',
       category: 'bundle',
       badge: 'Best Seller',
@@ -69,6 +73,7 @@ export default function ProductsPage() {
       features: ['50+ magnets available', 'Logo and branding', 'Bulk pricing', 'Professional finish'],
       image: '/images/magnet5.jpeg',
       price: 'From £1.50',
+      stripePriceId: 'price_1Rs6SQ00GVx7y3HkBAa4oGT8', // Custom quote, no direct price ID
       link: '/contact',
       category: 'business',
       badge: 'Custom Quote'
@@ -80,6 +85,7 @@ export default function ProductsPage() {
       features: ['Custom wedding photos', 'Elegant packaging', 'Date and names included', 'Bulk discounts'],
       image: '/images/magnet6.jpeg',
       price: 'From £2.00',
+      stripePriceId: null, // Custom quote, no direct price ID
       link: '/contact',
       category: 'special',
       badge: 'Wedding Special'

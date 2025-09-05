@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { getStripe } from '@/lib/stripe-server'
 
 
 export async function POST(request) {
@@ -11,7 +12,8 @@ export async function POST(request) {
       shippingAddressId,
       paymentMethodId,
       userId,
-      total
+      total,
+      paymentIntentId
     } = await request.json()
 
     console.log('Received order request with:', {
@@ -37,9 +39,9 @@ export async function POST(request) {
       )
     }
 
-    if (!paymentMethodId) {
+    if (!paymentIntentId) {
       return NextResponse.json(
-        { error: 'Payment method is required' },
+        { error: 'Payment intent is required' },
         { status: 400 }
       )
     }
@@ -82,19 +84,40 @@ export async function POST(request) {
       totalPrice
     })
 
+    // Verify payment intent with Stripe
+    const stripe = getStripe()
+    let paymentIntent
+    
+    try {
+      paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+      
+      if (paymentIntent.status !== 'succeeded') {
+        return NextResponse.json(
+          { error: 'Payment not completed' },
+          { status: 400 }
+        )
+      }
+    } catch (error) {
+      console.error('Error verifying payment intent:', error)
+      return NextResponse.json(
+        { error: 'Invalid payment intent' },
+        { status: 400 }
+      )
+    }
+
     // Create order in database
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert([
         {
           user_id: user_id,
-          status: 'pending',
+          status: 'processing',
           shipping_address_id: shippingAddressId,
           subtotal: subtotal,
           shipping_cost: shippingCost,
           total: totalPrice,
-          payment_status: 'pending',
-          payment_intent_id: `demo_${Date.now()}`
+          payment_status: 'paid',
+          payment_intent_id: paymentIntentId
         }
       ])
       .select()

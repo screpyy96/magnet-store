@@ -5,10 +5,13 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSelector, useDispatch } from 'react-redux'
 import { selectCartItems, clearCart } from '@/store/slices/cartSlice'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements } from '@stripe/react-stripe-js'
 import AddressSelector from '@/components/checkout/AddressSelector'
 import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector'
 import OrderSummary from '@/components/checkout/OrderSummary'
 import DeliveryInfo from '@/components/custom/DeliveryInfo'
+import StripePaymentForm from '@/components/checkout/StripePaymentForm'
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -16,7 +19,8 @@ export default function CheckoutPage() {
 
   const cartItems = useSelector(selectCartItems)
   const [selectedAddress, setSelectedAddress] = useState(null)
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
+  const [stripePromise] = useState(() => loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY))
+  const [clientSecret, setClientSecret] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [justPlacedOrder, setJustPlacedOrder] = useState(false)
@@ -29,6 +33,42 @@ export default function CheckoutPage() {
    
     return sum + itemTotal;
   }, 0)
+
+  // Create payment intent when total changes
+  useEffect(() => {
+    if (total > 0 && user) {
+      createPaymentIntent()
+    }
+  }, [total, user])
+
+  const createPaymentIntent = async () => {
+    try {
+      const response = await fetch('/api/stripe/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cart: cartItems,
+          currency: 'gbp',
+          metadata: {
+            cart_items: cartItems.length.toString()
+          }
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create payment intent')
+      }
+
+      setClientSecret(data.clientSecret)
+    } catch (error) {
+      console.error('Error creating payment intent:', error)
+      setError('Failed to initialize payment. Please try again.')
+    }
+  }
   
 
   useEffect(() => {
@@ -57,9 +97,9 @@ export default function CheckoutPage() {
     return null
   }
 
-  const handlePlaceOrder = async () => {
-    if (!selectedAddress || !selectedPaymentMethod) {
-      setError('Please select both shipping address and payment method')
+  const handlePlaceOrder = async (paymentIntentId) => {
+    if (!selectedAddress) {
+      setError('Please select a shipping address')
       return
     }
     
@@ -83,7 +123,7 @@ export default function CheckoutPage() {
           items: cartItems,
           total: total,
           shippingAddressId: selectedAddress.id,
-          paymentMethodId: selectedPaymentMethod.stripe_payment_method_id,
+          paymentIntentId: paymentIntentId,
           userId: user.id
         }),
       })
@@ -114,6 +154,14 @@ export default function CheckoutPage() {
     }
   }
 
+  if (!clientSecret) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -123,17 +171,20 @@ export default function CheckoutPage() {
             onAddressSelect={setSelectedAddress}
           />
           
-          <PaymentMethodSelector
-            selectedPaymentMethod={selectedPaymentMethod}
-            onPaymentMethodSelect={setSelectedPaymentMethod}
-          />
+          <Elements stripe={stripePromise} options={{ clientSecret }}>
+            <StripePaymentForm
+              onPlaceOrder={handlePlaceOrder}
+              isLoading={isLoading}
+              error={error}
+            />
+          </Elements>
           
           <DeliveryInfo />
         </div>
 
         <div className="lg:pl-8">
           <OrderSummary 
-            onPlaceOrder={handlePlaceOrder}
+            onPlaceOrder={() => {}} // This will be handled by StripePaymentForm
             isLoading={isLoading}
             error={error}
             totalPrice={total}
