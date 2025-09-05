@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe-server'
 import { createClient } from '@/utils/supabase/server'
 
+export const runtime = 'nodejs'
+
 export async function POST(request) {
   try {
     const { cart, currency = 'gbp', metadata = {} } = await request.json()

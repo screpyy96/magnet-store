@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getStripe } from '@/lib/stripe-server'
 
+export const runtime = 'nodejs'
+
 
 export async function POST(request) {
   try {

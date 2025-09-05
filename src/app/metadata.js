@@ -69,4 +69,15 @@ export const metadata = {
   authors: [{ name: 'My Sweet Magnets Team' }],
   generator: 'Next.js',
   referrer: 'origin-when-cross-origin',
-} 
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/icons/icon-192x192.png'
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'My Sweet Magnets'
+  }
+}

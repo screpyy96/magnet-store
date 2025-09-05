@@ -1,6 +1,5 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit'
 import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist'
-import storage from 'redux-persist/lib/storage'
 import cartReducer from './slices/cartSlice'
 
 // Configurare pentru a gestiona erorile de stocare
@@ -25,7 +24,18 @@ const getStorage = () => {
       const testKey = '__storage_test__'
       window.localStorage.setItem(testKey, testKey)
       window.localStorage.removeItem(testKey)
-      return require('redux-persist/lib/storage').default
+      // Return a localStorage-backed storage wrapper without importing redux-persist/lib/storage
+      return {
+        getItem: (key) => Promise.resolve(window.localStorage.getItem(key)),
+        setItem: (key, value) => {
+          window.localStorage.setItem(key, value)
+          return Promise.resolve()
+        },
+        removeItem: (key) => {
+          window.localStorage.removeItem(key)
+          return Promise.resolve()
+        }
+      }
     } catch (e) {
       console.warn('localStorage not available, falling back to noop storage')
       return createNoopStorage()
@@ -133,4 +143,9 @@ export const store = configureStore({
     }),
 })
 
-export const persistor = persistStore(store) 
+let _persistor = null
+if (typeof window !== 'undefined') {
+  _persistor = persistStore(store)
+}
+
+export const persistor = _persistor

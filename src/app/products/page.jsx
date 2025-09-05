@@ -18,7 +18,7 @@ export default function ProductsPage() {
       image: '/images/magnet1.jpeg',
       price: '5.00',
       stripePriceId: 'price_1Rs6NS00GVx7y3HkUSrAwqOk',
-      link: '/custom?qty=1',
+      link: '/custom?package=1',
       category: 'single',
       badge: 'Most Popular',
       sizes: ['5x5cm'],
@@ -33,7 +33,7 @@ export default function ProductsPage() {
       price: '17.00',
       originalPrice: '30.00',
       stripePriceId: 'price_1Rs6FA00GVx7y3Hkute2kqYV',
-      link: '/custom?qty=6',
+      link: '/custom?package=6',
       category: 'bundle',
       badge: 'Popular Choice',
       savings: '43%'
@@ -47,7 +47,7 @@ export default function ProductsPage() {
       price: '23.00',
       originalPrice: '45.00',
       stripePriceId: 'price_1Rs6Ia00GVx7y3HkawawVAry',
-      link: '/custom?qty=9',
+      link: '/custom?package=9',
       category: 'bundle',
       badge: 'Best Value',
       savings: '49%'
@@ -61,7 +61,7 @@ export default function ProductsPage() {
       price: '28.00',
       originalPrice: '60.00',
       stripePriceId: 'price_1Rs6Nw00GVx7y3HkQ27NdFu7',
-      link: '/custom?qty=12',
+      link: '/custom?package=12',
       category: 'bundle',
       badge: 'Best Seller',
       savings: '53%'

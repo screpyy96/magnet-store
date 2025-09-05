@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import heroImg from "../../public/images/hero.webp";
 
 export default function Hero() {
   return (
@@ -7,12 +8,13 @@ export default function Hero() {
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/images/hero.jpeg"
+          src={heroImg}
           alt="Premium Custom Fridge Magnets"
           fill
           priority
           className="object-cover"
-          quality={100}
+          sizes="100vw"
+          placeholder="blur"
         />
         <div className="absolute inset-0 bg-black/40" />
       </div>

@@ -12,6 +12,9 @@ export default [
         Buffer: "readonly",
         require: "readonly"
       }
+    },
+    settings: {
+      react: { version: "detect" }
     }
   },
   pluginJs.configs.recommended,

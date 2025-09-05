@@ -70,17 +70,16 @@ const PACKAGES = [
 
 // Get package from URL or default to 6 magnets
 const getInitialPackage = () => {
-  if (typeof window === 'undefined') return PACKAGES[1]; // Default to 6 pack
+  // During SSR, avoid selecting a default to prevent hydration mismatch
+  if (typeof window === 'undefined') return null;
   const params = new URLSearchParams(window.location.search);
-  const pkgId = params.get('package');
+  const pkgId = params.get('package') || params.get('qty');
   
-  // Only select package if it's explicitly provided in URL
   if (pkgId) {
     const foundPackage = PACKAGES.find(pkg => pkg.id === pkgId);
     if (foundPackage) return foundPackage;
   }
-  
-  // If no valid package in URL, return null to show no selection
+  // No explicit selection => show no selection by default
   return null;
 };
 
@@ -97,6 +96,21 @@ export default function Custom() {
   const [currentEditingFile, setCurrentEditingFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+ 
+  // On mount (client), ensure we reflect any URL package (supports ?package= and legacy ?qty=)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (selectedPackage) return;
+    const params = new URLSearchParams(window.location.search);
+    const pkgId = params.get('package') || params.get('qty');
+    if (pkgId) {
+      const found = PACKAGES.find(p => p.id === pkgId);
+      setSelectedPackage(found || PACKAGES[1]); // default to 6-pack if invalid id
+    } else {
+      // No param provided -> default to 6-pack on client to avoid SSR hydration issues
+      setSelectedPackage(PACKAGES[1]);
+    }
+  }, []);
   
   // Local state for package images (not in Redux)
   const [packageImages, setPackageImages] = useState([]);
@@ -485,16 +499,7 @@ export default function Custom() {
                   </button>
                 )}
                 
-                {/* Temporary debug button */}
-                <button
-                  onClick={() => {
-                    localStorage.clear();
-                    window.location.reload();
-                  }}
-                  className="w-full bg-red-200 hover:bg-red-300 text-red-700 font-medium py-2 px-4 rounded-lg transition-colors text-sm"
-                >
-                  Clear All Storage & Reload (Debug)
-                </button>
+                
               </div>
             </div>
           </div>
