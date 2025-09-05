@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Disable optimization to avoid sharp dependency during build
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
