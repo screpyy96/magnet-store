@@ -109,7 +109,7 @@ function RegisterForm() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-pink-200 px-8 py-10 mx-auto">
         <div>
-          <Image src="/logo.png" alt="My Sweet Magnets Logo" width={64} height={64} style={{ width: '64px', height: 'auto' }} className="mx-auto mb-4" />
+          <Image src="/logo.svg" alt="My Sweet Magnets" width={160} height={48} className="mx-auto mb-4" />
           <h2 className="text-3xl font-extrabold text-pink-700 text-center font-nunito flex items-center justify-center gap-2"><span>⭐</span>Create your account</h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Already have an account?{' '}

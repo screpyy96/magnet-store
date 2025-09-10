@@ -4,8 +4,9 @@ import { cookies } from 'next/headers';
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    // Build server client with cookies-based session
+    await cookies(); // ensure headers are available in this context
+    const supabase = await createClient();
     
     // Verificăm autentificarea utilizatorului
     const { data: { session } } = await supabase.auth.getSession();

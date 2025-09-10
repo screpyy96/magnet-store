@@ -133,30 +133,34 @@ export default function OrdersManagement() {
       
       // Get user profiles for the orders
       if (ordersData && ordersData.length > 0) {
-        const userIds = [...new Set(ordersData.map(order => order.user_id))];
+        const userIds = [...new Set(ordersData.map(order => order.user_id).filter(Boolean))];
         
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, email')
-          .in('id', userIds);
-        
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
-        } else {
-          // Create a map of user_id to profile
-          const profilesMap = {};
-          profilesData?.forEach(profile => {
-            profilesMap[profile.id] = profile;
-          });
-          
-          // Add profile data to orders
-          const ordersWithProfiles = ordersData.map(order => ({
-            ...order,
-            profiles: profilesMap[order.user_id] || null
-          }));
-          
-          setOrders(ordersWithProfiles);
+        let profilesData = []
+        if (userIds.length > 0) {
+          const { data: pData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .in('id', userIds);
+          if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
+          } else {
+            profilesData = pData || []
+          }
         }
+
+        // Create a map of user_id to profile
+        const profilesMap = {};
+        profilesData.forEach(profile => {
+          profilesMap[profile.id] = profile;
+        });
+        
+        // Add profile data to orders
+        const ordersWithProfiles = ordersData.map(order => ({
+          ...order,
+          profiles: order.user_id ? (profilesMap[order.user_id] || null) : { email: order.guest_email || 'Guest' }
+        }));
+        
+        setOrders(ordersWithProfiles);
       } else {
         setOrders(ordersData || []);
       }

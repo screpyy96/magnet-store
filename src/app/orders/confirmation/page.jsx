@@ -1,143 +1,110 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
-import Link from 'next/link'
+import { useDispatch } from 'react-redux'
+import { clearCart } from '@/store/slices/cartSlice'
 
-export default function OrderConfirmation() {
+function ConfirmationContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { user } = useAuth()
+  const dispatch = useDispatch()
+  const [status, setStatus] = useState('processing')
   const [orderId, setOrderId] = useState(null)
-  
+  const [message, setMessage] = useState('Processing your payment...')
+
   useEffect(() => {
-    const orderIdParam = searchParams.get('order_id')
-    if (!user) {
-      router.push('/login')
-      return
+    const paymentIntent = searchParams.get('payment_intent')
+    const clientSecret = searchParams.get('payment_intent_client_secret')
+    const oid = searchParams.get('order_id')
+    setOrderId(oid)
+
+    const maybeFinalizeAfterRedirect = async () => {
+      try {
+        const stored = typeof window !== 'undefined' ? window.localStorage.getItem('pendingOrder') : null
+        if (stored && (paymentIntent || clientSecret)) {
+          const payload = JSON.parse(stored)
+          const res = await fetch('/api/orders/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...payload,
+              paymentIntentId: paymentIntent,
+            }),
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error || 'Failed to finalize order')
+          setOrderId(data.orderId)
+          setStatus('success')
+          setMessage('Order placed successfully.')
+          // Clear cart and local storage
+          dispatch(clearCart())
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('pendingOrder')
+          }
+          return
+        }
+        // No pending order; just show success
+        if (paymentIntent || clientSecret) {
+          setStatus('success')
+          setMessage('Payment confirmed successfully.')
+        } else if (oid) {
+          setStatus('success')
+          setMessage('Order placed successfully.')
+        } else {
+          setStatus('processing')
+          setMessage('Finalizing your payment...')
+        }
+      } catch (e) {
+        console.error('Finalize after redirect error:', e)
+        setStatus('success')
+        setMessage('Payment confirmed. We will email your order details shortly.')
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem('pendingOrder')
+        }
+      }
     }
-    if (!orderIdParam) {
-      // Instead of redirecting, just show a message
-      console.log('No order_id in URL')
-      return
-    }
-    setOrderId(orderIdParam)
-  }, [searchParams, user, router])
-  
-  if (!orderId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 mb-4">
-            <svg className="w-8 h-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Order Confirmation</h1>
-          <p className="text-gray-600 mb-4">No order information found.</p>
-          <Link
-            href="/orders"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-          >
-            View All Orders
-          </Link>
-        </div>
-      </div>
-    )
-  }
-  
+
+    maybeFinalizeAfterRedirect()
+  }, [searchParams])
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-          <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Thank You for Your Order!</h1>
-        <p className="text-gray-600">Your order has been successfully placed.</p>
-      </div>
-      
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">Order Details</h2>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-600">Order Number:</span>
-            <span className="font-medium">{orderId}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Date:</span>
-            <span className="font-medium">{new Date().toLocaleDateString()}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Status:</span>
-            <span className="font-medium text-yellow-600">Pending</span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">What's Next?</h2>
-        <div className="space-y-4 text-sm">
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-blue-600 text-xs font-bold">1</span>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-md w-full text-center">
+        {status === 'success' ? (
+          <>
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+              <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-            <div>
-              <p className="font-medium">Order Processing</p>
-              <p className="text-gray-600">We'll start processing your custom magnets within 24 hours.</p>
-            </div>
-          </div>
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-blue-600 text-xs font-bold">2</span>
-            </div>
-            <div>
-              <p className="font-medium">Production</p>
-              <p className="text-gray-600">Your magnets will be custom-made with your uploaded images.</p>
-            </div>
-          </div>
-          <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-blue-600 text-xs font-bold">3</span>
-            </div>
-            <div>
-              <p className="font-medium">Shipping</p>
-              <p className="text-gray-600">We'll ship your order within 3-5 business days.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-        <div className="flex items-start space-x-3">
-          <div className="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg className="w-4 h-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <div>
-            <p className="font-medium text-yellow-800">Payment Processing</p>
-            <p className="text-yellow-700 text-sm">Payment processing will be integrated with Stripe later. For now, this is a demo order.</p>
-          </div>
-        </div>
-      </div>
-      
-      <div className="text-center space-x-4">
-        <Link
-          href="/orders"
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-        >
-          View All Orders
-        </Link>
-        <Link
-          href="/custom"
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-        >
-          Create More Magnets
-        </Link>
+            <h1 className="text-xl font-semibold text-gray-900 mb-2">Thank you!</h1>
+            <p className="text-gray-600 mb-2">{message}</p>
+            {orderId && (
+              <p className="text-sm text-gray-500">Order ID: {orderId}</p>
+            )}
+            <button
+              onClick={() => router.push('/')}
+              className="mt-6 inline-flex items-center px-6 py-3 rounded-full bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              Back to Home
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">{message}</p>
+          </>
+        )}
       </div>
     </div>
   )
-} 
+}
+
+export default function ConfirmationPage() {
+  return (
+    <Suspense>
+      <ConfirmationContent />
+    </Suspense>
+  )
+}

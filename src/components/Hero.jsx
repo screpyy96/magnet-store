@@ -1,94 +1,112 @@
+
 import Link from "next/link";
 import Image from "next/image";
 
 export default function Hero() {
   return (
-    <section className="relative h-auto min-h-[90vh] w-full overflow-hidden pt-20 pb-32 md:pt-0 md:pb-0 md:h-[90vh] md:min-h-[600px]">
-      {/* Background Image with Overlay */}
-      <div className="absolute inset-0 z-0">
-        <Image
-          src="/images/hero.webp"
-          alt="Premium Custom Fridge Magnets"
-          fill
-          priority
-          className="object-cover"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-black/40" />
-      </div>
+    <section className="relative overflow-hidden">
+      {/* Background: premium gradient + subtle grid */}
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(60rem_40rem_at_10%_-10%,#fde5f2,transparent),radial-gradient(60rem_40rem_at_110%_10%,#ede9fe,transparent)]" />
+      <div
+        className="absolute inset-0 -z-10 opacity-[.06]"
+        style={{
+          backgroundImage:
+            "linear-gradient(0deg,transparent 24%,rgba(0,0,0,.5) 25%,rgba(0,0,0,.5) 26%,transparent 27%,transparent 74%,rgba(0,0,0,.5) 75%,rgba(0,0,0,.5) 76%,transparent 77%),linear-gradient(90deg,transparent 24%,rgba(0,0,0,.5) 25%,rgba(0,0,0,.5) 26%,transparent 27%,transparent 74%,rgba(0,0,0,.5) 75%,rgba(0,0,0,.5) 76%,transparent 77%)",
+          backgroundSize: "32px 32px",
+        }}
+      />
 
-      {/* Content */}
-      <div className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-center text-white sm:px-6 lg:px-8 py-16 md:py-0">
-        <div className="max-w-4xl mx-auto">
-          <div className="inline-block mb-4 md:mb-6 px-4 py-1.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-            <span className="text-sm font-semibold text-white drop-shadow-md [text-shadow:_0_1px_2px_rgba(0,0,0,0.8)]">
-              🏴󠁧󠁢󠁥󠁮󠁧󠁿 Proudly Handcrafted in the UK
-            </span>
-          </div>
-          
-          <h1 className="text-3xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl mb-4 sm:mb-6 leading-tight drop-shadow-lg [text-shadow:_0_2px_8px_rgba(0,0,0,0.5)]">
-            Cherish Every Memory with My Sweet Magnets
-          </h1>
-          
-          <p className="mx-auto mb-6 sm:mb-8 text-base sm:text-xl md:text-2xl max-w-2xl text-white leading-relaxed px-2 drop-shadow-lg [text-shadow:_0_2px_4px_rgba(0,0,0,0.7)] font-medium">
-            Turn your favourite moments into beautiful, high-quality fridge magnets. Handmade in the UK with love.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/products"
-              className="group relative inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-white bg-gradient-to-r from-pink-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 transform transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl overflow-hidden"
-            >
-              <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-              <span className="relative flex items-center">
-                Shop Now
-                <svg className="ml-2 -mr-1 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </span>
-            </Link>
-            <Link
-              href="/custom"
-              className="group relative inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transform transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl overflow-hidden"
-            >
-              <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-              <span className="relative flex items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 lg:pt-36 lg:pb-24">
+        <div className="grid lg:grid-cols-12 gap-8 items-center">
+          {/* Copy */}
+          <div className="lg:col-span-6 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur border border-pink-200/60">
+              <Image src="/logo-mark.svg" alt="Mark" width={20} height={20} />
+              <span className="text-xs font-semibold text-pink-700">Handcrafted in the UK</span>
+            </div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600">
+              Premium Custom Photo Magnets
+            </h1>
+            <p className="mt-4 text-base sm:text-lg text-gray-700 max-w-xl mx-auto lg:mx-0">
+              Transform your favourite moments into stunning fridge magnets. Premium print, strong hold, made with love in Britain.
+            </p>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+              <Link
+                href="/custom"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-xl text-white font-semibold bg-gradient-to-r from-pink-500 to-purple-500 shadow-md hover:shadow-lg hover:opacity-95 transition"
+              >
                 Create Yours
-                <svg className="ml-2 -mr-1 w-5 h-5 group-hover:rotate-45 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                <svg className="ml-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v12m6-6H6" />
                 </svg>
+              </Link>
+              <Link
+                href="/products"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-pink-700 bg-white/80 border border-pink-200 hover:bg-white transition"
+              >
+                Shop Packs
+                <svg className="ml-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4-4 4M3 12h18" />
+                </svg>
+              </Link>
+            </div>
+            <div className="mt-4 flex items-center justify-center lg:justify-start gap-2 text-sm text-gray-600">
+              <span className="flex items-center">
+                <span className="text-yellow-400">★★★★★</span>
+                <span className="ml-2">Rated 4.9/5 by 1,200+ customers</span>
               </span>
-            </Link>
+            </div>
           </div>
-          <p className="mt-4 text-sm font-medium text-white drop-shadow-md [text-shadow:_0_1px_2px_rgba(0,0,0,0.8)]">
-            ⚡ <span className="font-semibold">UK Customers:</span> Free delivery on orders over £30!
-          </p>
-        </div>
 
-        {/* Features Grid */}
-        <div className="relative mt-12 sm:mt-16 md:absolute md:bottom-8 left-0 right-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-              {[
-                { icon: '🚚', text: 'UK Next Day Delivery' },
-                { icon: '🎨', text: 'Fully Customisable' },
-                { icon: '✨', text: 'Premium British Quality' },
-                { icon: '💝', text: 'Perfect Personalised Gifts' }
-              ].map((item, index) => (
-                <div key={index} className="flex items-center justify-center gap-1 sm:gap-2 bg-white/10 backdrop-blur-sm px-2 sm:px-4 py-2 sm:py-3 rounded-lg border border-white/20">
-                  <span className="text-base sm:text-xl">{item.icon}</span>
-                  <span className="text-xs sm:text-sm font-semibold text-white drop-shadow-md [text-shadow:_0_1px_2px_rgba(0,0,0,0.8)]">{item.text}</span>
-                </div>
-              ))}
+          {/* Visual / mockup */}
+          <div className="lg:col-span-6 relative">
+            <div className="relative mx-auto w-full max-w-xl">
+              <div className="absolute -top-10 -left-10 h-32 w-32 rounded-full bg-pink-300/40 blur-2xl" />
+              <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-purple-300/40 blur-2xl" />
+
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  '/images/magnet1.jpeg',
+                  '/images/magnet2.jpeg',
+                  '/images/magnet3.jpeg',
+                  '/images/magnet4.jpeg',
+                  '/images/magnet5.jpeg',
+                  '/images/magnet6.jpeg',
+                ].map((src, i) => (
+                  <div
+                    key={i}
+                    className={`relative aspect-square rounded-2xl overflow-hidden shadow-lg border border-white/70 bg-white ${
+                      i % 3 === 0 ? 'rotate-[-3deg]' : 'rotate-[2deg]'
+                    } hover:rotate-0 transition`}
+                  >
+                    <Image src={src} alt="Custom magnet" fill className="object-cover" sizes="(max-width:768px) 33vw, 200px" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-white/90 backdrop-blur border border-pink-200 text-sm font-medium text-pink-700 shadow-sm">
+                Free UK Delivery on all orders
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-40 h-40 bg-pink-400/20 rounded-full mix-blend-screen filter blur-3xl" />
-        <div className="absolute bottom-1/4 -right-20 w-60 h-60 bg-amber-400/20 rounded-full mix-blend-screen filter blur-3xl" />
+        {/* Feature pills */}
+        <div className="mt-10">
+          <div className="flex flex-wrap justify-center gap-2">
+            {[
+              { icon: '🚚', text: 'Next-Day Dispatch' },
+              { icon: '🎨', text: 'Fully Customisable' },
+              { icon: '✨', text: 'Premium Print' },
+              { icon: '🧲', text: 'Strong Magnetic Hold' },
+            ].map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/80 border border-pink-200 text-sm text-gray-700">
+                <span>{item.icon}</span>
+                <span className="font-medium">{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

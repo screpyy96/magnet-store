@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Confirm your MagnetCraft account</title>
+    <title>Confirm your My Sweet Magnets account</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -20,7 +20,7 @@
         .header {
             text-align: center;
             padding: 30px 0;
-            background-color: #4F46E5;
+            background: linear-gradient(90deg, #EC4899 0%, #8B5CF6 100%);
             color: white;
             border-radius: 8px 8px 0 0;
         }
@@ -32,22 +32,20 @@
         }
         .logo {
             font-size: 24px;
-            font-weight: bold;
+            font-weight: 800;
             margin-bottom: 10px;
         }
         .button {
             display: inline-block;
             padding: 12px 24px;
-            background-color: #4F46E5;
+            background: linear-gradient(90deg, #EC4899 0%, #8B5CF6 100%);
             color: white;
             text-decoration: none;
             border-radius: 6px;
             font-weight: 500;
             margin: 20px 0;
         }
-        .button:hover {
-            background-color: #4338CA;
-        }
+        .button:hover { opacity: 0.9; }
         .footer {
             text-align: center;
             padding: 20px;
@@ -64,12 +62,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">MagnetCraft</div>
+            <div class="logo">My Sweet Magnets</div>
             <p>Transform Your Memories Into Magnets</p>
         </div>
         
         <div class="content">
-            <h2>Welcome to MagnetCraft! 🎉</h2>
+            <h2>Welcome to My Sweet Magnets! 🎉</h2>
             
             <p>Thank you for signing up! We're excited to help you create beautiful custom magnets from your photos.</p>
             
@@ -94,8 +92,8 @@
         </div>
         
         <div class="footer">
-            <p>This email was sent to {{ .Email }}. If you didn't create an account with MagnetCraft, you can safely ignore this email.</p>
-            <p>&copy; 2024 MagnetCraft. All rights reserved.</p>
+            <p>This email was sent to {{ .Email }}. If you didn't create an account with My Sweet Magnets, you can safely ignore this email.</p>
+            <p>&copy; 2024 My Sweet Magnets. All rights reserved.</p>
         </div>
     </div>
 </body>

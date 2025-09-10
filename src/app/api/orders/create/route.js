@@ -12,9 +12,12 @@ export async function POST(request) {
     const { 
       items, 
       shippingAddressId,
+      shippingDetails,
       paymentMethodId,
       userId,
-      total,
+      subtotal,
+      totals,
+      email,
       paymentIntentId
     } = await request.json()
 
@@ -23,7 +26,7 @@ export async function POST(request) {
       hasShippingAddress: !!shippingAddressId,
       hasPaymentMethod: !!paymentMethodId,
       hasUserId: !!userId,
-      total: total
+      providedTotals: totals || null
     })
 
     // Validate required fields
@@ -34,9 +37,9 @@ export async function POST(request) {
       )
     }
 
-    if (!shippingAddressId) {
+    if (!shippingAddressId && !shippingDetails) {
       return NextResponse.json(
-        { error: 'Shipping address is required' },
+        { error: 'Shipping information is required' },
         { status: 400 }
       )
     }
@@ -48,12 +51,7 @@ export async function POST(request) {
       )
     }
     
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      )
-    }
+    // userId is optional to support guest checkout
 
     // Create Supabase client
     console.log('Creating Supabase client...');
@@ -61,23 +59,51 @@ export async function POST(request) {
     console.log('Supabase client created successfully');
 
     // Use the provided userId
-    const user_id = userId;
+    const user_id = userId || null;
     console.log('Using user_id:', user_id);
 
     // Get shipping address details
-    const { data: addressData, error: addressError } = await supabase
-      .from('shipping_addresses')
-      .select('*')
-      .eq('id', shippingAddressId)
-      .single()
+    let addressData = null
+    if (shippingAddressId) {
+      const { data: addr, error: addressError } = await supabase
+        .from('shipping_addresses')
+        .select('*')
+        .eq('id', shippingAddressId)
+        .single()
+      if (addressError) throw addressError
+      addressData = addr
+    }
 
-    if (addressError) throw addressError
-
-    // Calculate order totals
-    const subtotal = total || items.reduce((sum, item) => sum + (item.totalPrice || item.price * (item.quantity || 1)), 0)
-    const shippingCost = subtotal >= 50 ? 0 : 4.99
-    const tax = subtotal * 0.20 // 20% VAT
-    const totalPrice = subtotal + shippingCost + tax
+    // Calculate order totals (server-authoritative package pricing, free shipping, no VAT)
+    const PACKAGE_PRICES = { '1': 5.00, '6': 17.00, '9': 23.00, '12': 28.00, '16': 36.00 }
+    const computeSubtotal = (arr) => {
+      let subtotal = 0
+      for (const item of arr) {
+        try {
+          const custom = item.custom_data ? JSON.parse(item.custom_data) : {}
+          if (custom?.type === 'custom_magnet_package' && custom.packageId && PACKAGE_PRICES[custom.packageId]) {
+            subtotal += PACKAGE_PRICES[custom.packageId]
+          } else {
+            const qty = typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : 1
+            const price = typeof item.totalPrice === 'number' && !isNaN(item.totalPrice)
+              ? item.totalPrice
+              : (typeof item.price === 'number' && !isNaN(item.price) ? item.price * qty : 0)
+            subtotal += price
+          }
+        } catch {
+          const qty = typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : 1
+          const price = typeof item.totalPrice === 'number' && !isNaN(item.totalPrice)
+            ? item.totalPrice
+            : (typeof item.price === 'number' && !isNaN(item.price) ? item.price * qty : 0)
+          subtotal += price
+        }
+      }
+      return subtotal
+    }
+    const computedSubtotal = computeSubtotal(items)
+    const shippingCost = 0
+    const tax = 0
+    const totalPrice = computedSubtotal + shippingCost + tax
 
     console.log('Order totals calculated:', {
       subtotal,
@@ -114,12 +140,21 @@ export async function POST(request) {
         {
           user_id: user_id,
           status: 'processing',
-          shipping_address_id: shippingAddressId,
-          subtotal: subtotal,
+          shipping_address_id: shippingAddressId || null,
+          subtotal: computedSubtotal,
           shipping_cost: shippingCost,
           total: totalPrice,
-          payment_status: 'paid',
-          payment_intent_id: paymentIntentId
+          payment_status: 'succeeded',
+          payment_intent_id: paymentIntentId,
+          // guest fields if present (DB columns exist as flattened fields)
+          guest_email: email || shippingDetails?.email || null,
+          guest_full_name: shippingDetails?.full_name || null,
+          guest_address_line1: shippingDetails?.address_line1 || null,
+          guest_address_line2: shippingDetails?.address_line2 || null,
+          guest_city: shippingDetails?.city || null,
+          guest_county: shippingDetails?.county || null,
+          guest_postal_code: shippingDetails?.postal_code || null,
+          guest_phone: shippingDetails?.phone || null
         }
       ])
       .select()
@@ -155,13 +190,15 @@ export async function POST(request) {
           const imagesToProcess = images.length > 0 ? images : thumbnails;
           
           // Create one order item per image in the package
+          const pkgPrice = (customData.packageId && PACKAGE_PRICES[customData.packageId]) ? PACKAGE_PRICES[customData.packageId] : (item.price || 0)
+          const unitPrice = pkgPrice / (imagesToProcess.length || 1)
           imagesToProcess.forEach((imageUrl, index) => {
             orderItems.push({
               order_id: order.id,
               product_name: `${packageName} - Image ${index + 1}`,
               quantity: 1,
               size: customData.size || '5x5',
-              price_per_unit: customData.pricePerUnit || (item.price / imagesToProcess.length),
+              price_per_unit: customData.pricePerUnit || unitPrice,
               special_requirements: `Package ${customData.packageId} - ${customData.finish || 'flexible'} finish`,
               image_url: imageUrl
             });
@@ -200,6 +237,12 @@ export async function POST(request) {
           image_url: null
         });
       }
+    }
+
+    // If guest checkout, attach shipping summary to first item for admin visibility
+    if (shippingDetails && orderItems.length > 0) {
+      const summary = `Guest shipping: ${shippingDetails.full_name || ''}, ${shippingDetails.address_line1 || ''} ${shippingDetails.address_line2 || ''}, ${shippingDetails.city || ''}, ${shippingDetails.county || ''}, ${shippingDetails.postal_code || ''}, ${shippingDetails.country || ''}. Phone: ${shippingDetails.phone || ''}. Email: ${email || shippingDetails.email || ''}`.replace(/\s+,/g, ',').trim()
+      orderItems[0].special_requirements = `${orderItems[0].special_requirements ? orderItems[0].special_requirements + ' | ' : ''}${summary}`.trim()
     }
 
     // Insert data into order_items table

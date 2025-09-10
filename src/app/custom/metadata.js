@@ -2,8 +2,8 @@ import { metadata as mainMetadata } from '../metadata';
 
 export const metadata = {
   ...mainMetadata,
-  title: 'Create Custom Photo Magnets | Design Yours Online | My Sweet Magnets UK',
-  description: 'Design your own personalised fridge magnets with our easy-to-use online tool. Upload photos, choose from various sizes & shapes, and create beautiful memories that stick. High-quality custom magnets starting at £9.99 with fast UK delivery.',
+  title: 'Create Custom Photo Magnets - Design Your Own | My Sweet Magnets UK',
+  description: 'Design and create your own custom photo magnets online. Upload your photos, choose your package, and create beautiful personalized magnets. Easy online designer with instant preview.',
   keywords: [
     ...mainMetadata.keywords,
     'create custom magnets', 'design your own magnets', 'personalised magnets UK',

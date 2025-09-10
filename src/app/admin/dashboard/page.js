@@ -165,15 +165,18 @@ export default function AdminDashboard() {
       let ordersWithUserInfo = []
       if (recentOrders && recentOrders.length > 0) {
         // Obținem ID-urile utilizatorilor
-        const userIds = [...new Set(recentOrders.map(order => order.user_id))]
+        const userIds = [...new Set(recentOrders.map(order => order.user_id).filter(Boolean))]
         
-        // Preluăm informațiile despre utilizatori într-un query separat
-        const { data: usersData, error: usersError } = await supabase
-          .from('profiles')
-          .select('id, email')
-          .in('id', userIds)
-        
-        if (usersError) throw usersError
+        // Preluăm informațiile despre utilizatori într-un query separat (doar dacă avem ID-uri valide)
+        let usersData = []
+        if (userIds.length > 0) {
+          const { data, error: usersError } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .in('id', userIds)
+          if (usersError) throw usersError
+          usersData = data || []
+        }
         
         // Creăm un mapping pentru lookup rapid
         const userMap = {}
@@ -186,7 +189,7 @@ export default function AdminDashboard() {
         // Combinăm datele de comenzi cu informațiile utilizatorilor
         ordersWithUserInfo = recentOrders.map(order => ({
           ...order,
-          profiles: userMap[order.user_id] || { email: 'N/A' }
+          profiles: order.user_id ? (userMap[order.user_id] || { email: 'N/A' }) : { email: 'Guest' }
         }))
       }
       

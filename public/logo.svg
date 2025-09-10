@@ -1,0 +1,33 @@
+<svg width="256" height="64" viewBox="0 0 256 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">My Sweet Magnets – Wordmark</title>
+  <desc id="desc">Rounded magnet monogram and wordmark in pink–purple gradient</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="256" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#EC4899"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.75"/>
+    </linearGradient>
+    <filter id="s" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- Magnet monogram (M) -->
+  <g transform="translate(8,8)" filter="url(#s)">
+    <!-- Left U leg -->
+    <path d="M0,6 a6,6 0 0 1 6,-6 h10 a6,6 0 0 1 6,6 v22 a10,10 0 0 1 -20,0 V10 h8 v18 a2,2 0 0 0 4,0 V8 a2,2 0 0 0 -2,-2 H6 a2,2 0 0 0 -2,2 v20 a14,14 0 0 0 28,0 V6 a6,6 0 0 1 6,-6 h10 a6,6 0 0 1 6,6 v22 a22,22 0 0 1 -44,0 z" fill="url(#g)"/>
+    <!-- Spark highlight -->
+    <circle cx="44" cy="6" r="2" fill="url(#g2)"/>
+    <circle cx="8" cy="4" r="1.5" fill="url(#g2)"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(88,16)">
+    <text x="0" y="16" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" font-weight="800" font-size="18" fill="url(#g)">My Sweet</text>
+    <text x="0" y="40" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" font-weight="800" font-size="22" fill="url(#g)">Magnets</text>
+  </g>
+</svg>
+

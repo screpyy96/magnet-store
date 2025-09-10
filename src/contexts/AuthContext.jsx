@@ -32,25 +32,47 @@ export function AuthProvider({ children }) {
   const router = useRouter()
   const pathname = usePathname()
   
+  // Funcție pentru verificarea statusului de admin folosind RPC
+  const checkAdminStatus = async () => {
+    try {
+      // Try server route first (SSR session via cookies)
+      const res = await fetch('/api/check-admin', { cache: 'no-store', credentials: 'include' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.isAdmin === true) {
+          setIsAdmin(true);
+          return;
+        }
+      }
+    } catch (error) {
+      // Ignore and fall back to client check
+    }
+
+    // Fallback: client-side check using current user id
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) {
+        setIsAdmin(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      setIsAdmin(!!data?.is_admin);
+    } catch (error) {
+      console.error('Admin fallback check failed:', error?.message || error);
+      setIsAdmin(false);
+    }
+  };
+
   useEffect(() => {
     // Verifică dacă avem un utilizator la încărcarea paginii
     const fetchUser = async () => {
       try {
-        // Try to get session from storage first for faster restoration
-        const storedSession = safeLocalStorage.getJSON('supabase_session');
-          
-        if (storedSession) {
-          const now = new Date().getTime();
-          
-          // If stored session isn't expired, use it immediately (fast path)
-          if (storedSession && storedSession.expires_at && storedSession.expires_at > now) {
-            setUser(storedSession.user || null);
-            if (storedSession.user) {
-              checkAdminStatus(storedSession.user.id);
-            }
-          }
-        }
-        
         // Always get the server session to ensure cookies are synchronized
         const { data, error } = await supabase.auth.getSession();
         
@@ -65,7 +87,7 @@ export function AuthProvider({ children }) {
           safeLocalStorage.setJSON('supabase_session', data.session);
           setUser(data.session.user || null);
           if (data.session.user) {
-            checkAdminStatus(data.session.user.id);
+            checkAdminStatus();
           }
         } else {
           setUser(null);
@@ -87,7 +109,7 @@ export function AuthProvider({ children }) {
         }
         setUser(session.user);
         if (session.user) {
-          checkAdminStatus(session.user.id);
+          checkAdminStatus();
         }
       } else {
         if (typeof window !== 'undefined') {
@@ -102,65 +124,6 @@ export function AuthProvider({ children }) {
       subscription?.unsubscribe();
     };
   }, []);
-
-  // Funcție pentru verificarea statusului de admin folosind RPC
-  const checkAdminStatus = async (userId) => {
-    if (!userId) {
-      return;
-    }
-
-    // Check cache first
-    const cachedAdminStatus = safeLocalStorage.getItem(`admin_status_${userId}`);
-    if (cachedAdminStatus !== null) {
-      setIsAdmin(cachedAdminStatus === 'true');
-      return;
-    }
-
-    try {
-      // Check admin status directly from profiles table instead of using RPC function
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        // If profile doesn't exist, create it
-        if (error.code === 'PGRST116') {
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: userId,
-              email: user?.email || '',
-              is_admin: false
-            });
-          
-          if (insertError) {
-            console.error('Error creating profile:', insertError);
-            setIsAdmin(false);
-            return;
-          }
-          
-          // Set admin status to false for new profile
-          safeLocalStorage.setItem(`admin_status_${userId}`, 'false');
-          setIsAdmin(false);
-          return;
-        }
-        throw error;
-      }
-
-      // Cache and set the admin status
-      const adminStatus = profile?.is_admin || false;
-      safeLocalStorage.setItem(`admin_status_${userId}`, adminStatus.toString());
-      setIsAdmin(adminStatus);
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      // Only update state if we don't have a cached value
-      if (cachedAdminStatus === null) {
-        setIsAdmin(false);
-      }
-    }
-  };
 
   // Store the intended URL before redirect
   const setRedirectAfterLogin = (url) => {
@@ -192,7 +155,7 @@ export function AuthProvider({ children }) {
         setUser(data.user)
         // Profile is created automatically by the trigger, but we can check admin status
         if (data.user) {
-          checkAdminStatus(data.user.id)
+          checkAdminStatus()
         }
       }
       
@@ -215,7 +178,7 @@ export function AuthProvider({ children }) {
         setUser(data.session.user)
         
         if (data.session.user) {
-          checkAdminStatus(data.session.user.id)
+          checkAdminStatus()
         }
         
         return { success: true, user: data.session.user }
@@ -298,7 +261,7 @@ export function AuthProvider({ children }) {
         }
         setUser(data.session.user);
         if (data.session.user) {
-          checkAdminStatus(data.session.user.id);
+          checkAdminStatus();
         }
         return { success: true, user: data.session.user };
       }

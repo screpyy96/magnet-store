@@ -53,10 +53,13 @@ export default function Navbar() {
           <div className="flex justify-between items-center h-16 md:h-20">
             {/* Left side - Logo */}
             <Link href="/" className="flex items-center group">
-              <Image src="/logo.png" alt="My Sweet Magnets Logo" width={48} height={48} style={{ width: '48px', height: 'auto' }} className="mr-2 max-h-12 w-auto" />
-              <span className="text-lg font-bold sm:text-2xl bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent transition-all duration-300 group-hover:opacity-90">
+              {/* Mobile: show mark + text */}
+              <Image src="/logo-mark.svg" alt="My Sweet Magnets" width={40} height={40} className="mr-2 max-h-12 w-auto sm:hidden" />
+              <span className="sm:hidden text-lg font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent transition-all duration-300 group-hover:opacity-90">
                 My Sweet Magnets
               </span>
+              {/* Desktop: show full logo */}
+              <Image src="/logo.svg" alt="My Sweet Magnets" width={160} height={48} className="hidden sm:block max-h-12 w-auto" />
             </Link>
 
             {/* Desktop Navigation Links - Hidden on mobile */}

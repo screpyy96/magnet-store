@@ -57,7 +57,7 @@ async function handlePaymentSucceeded(paymentIntent) {
   const { error } = await supabase
     .from('orders')
     .update({ 
-      payment_status: 'paid',
+      payment_status: 'succeeded',
       status: 'processing'
     })
     .eq('payment_intent_id', paymentIntent.id)

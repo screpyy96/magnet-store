@@ -191,7 +191,7 @@ export default function AdminOrderPage({ params }) {
             : Promise.resolve({ data: null, error: null })
         ]);
 
-        // Combine all data into a single object
+        // Combine all data into a single object, include guest fields
         const fullOrderData = {
           ...orderData,
           order_items: orderItemsError ? [] : orderItemsData || [],
@@ -503,15 +503,15 @@ export default function AdminOrderPage({ params }) {
           <div className="space-y-3">
             <div>
               <span className="text-sm text-gray-500 block">Name:</span>
-              <span className="text-sm font-medium">{order.shipping_addresses?.full_name || 'N/A'}</span>
+              <span className="text-sm font-medium">{order.shipping_addresses?.full_name || order.guest_full_name || 'N/A'}</span>
             </div>
             <div>
               <span className="text-sm text-gray-500 block">Email:</span>
-              <span className="text-sm font-medium">{order.profiles?.email || 'N/A'}</span>
+              <span className="text-sm font-medium">{order.profiles?.email || order.guest_email || 'N/A'}</span>
             </div>
             <div>
               <span className="text-sm text-gray-500 block">Phone:</span>
-              <span className="text-sm font-medium">{order.shipping_addresses?.phone || 'N/A'}</span>
+              <span className="text-sm font-medium">{order.shipping_addresses?.phone || order.guest_phone || 'N/A'}</span>
             </div>
           </div>
         </div>
@@ -533,16 +533,18 @@ export default function AdminOrderPage({ params }) {
               <p className="text-sm">{order.shipping_addresses.phone || 'N/A'}</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-gray-500">
-                Shipping address is not available for this order.
-              </p>
-              <button 
-                onClick={fetchOrderDetails} 
-                className="text-sm text-indigo-600 hover:text-indigo-500"
-              >
-                Reload order data
-              </button>
+            <div className="space-y-1">
+              <p className="text-sm">{order.guest_full_name || 'N/A'}</p>
+              <p className="text-sm">{order.guest_address_line1 || 'N/A'}</p>
+              {order.guest_address_line2 && (
+                <p className="text-sm">{order.guest_address_line2}</p>
+              )}
+              <p className="text-sm">{order.guest_city || 'N/A'}, {order.guest_county || 'N/A'}</p>
+              <p className="text-sm">{order.guest_postal_code || 'N/A'}</p>
+              <p className="text-sm">{order.guest_phone || 'N/A'}</p>
+              {order.guest_email && (
+                <p className="text-sm text-gray-500">{order.guest_email}</p>
+              )}
             </div>
           )}
         </div>

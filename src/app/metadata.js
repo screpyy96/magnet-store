@@ -71,9 +71,18 @@ export const metadata = {
   referrer: 'origin-when-cross-origin',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/icons/icon-192x192.png'
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' }
+    ],
+    shortcut: '/favicon.svg',
+    apple: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-180x180.png', sizes: '180x180', type: 'image/png' }
+    ],
+    other: [
+      { rel: 'mask-icon', url: '/safari-pinned-tab.svg', color: '#EC4899' }
+    ]
   },
   appleWebApp: {
     capable: true,

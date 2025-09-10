@@ -299,9 +299,7 @@ export default function AboutPage() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Our Process
-            </h2>
+            <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Our Process</h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
               How we transform your photos into beautiful, lasting magnets
             </p>
@@ -391,9 +389,9 @@ export default function AboutPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
             Meet Our Team
           </h2>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            The passionate people behind MagnetCraft
-          </p>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            The passionate people behind My Sweet Magnets
+            </p>
         </motion.div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -484,7 +482,7 @@ export default function AboutPage() {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-16">
+      <div className="bg-gradient-to-r from-pink-600 to-purple-600 py-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -495,12 +493,12 @@ export default function AboutPage() {
             <h2 className="text-3xl font-bold text-white mb-6">
               Ready to Create Your Own Memories?
             </h2>
-            <p className="text-xl text-indigo-100 mb-8 max-w-3xl mx-auto">
+            <p className="text-xl text-pink-50/90 mb-8 max-w-3xl mx-auto">
               Join thousands of happy customers who have transformed their photos into beautiful magnets.
             </p>
             <Link
               href="/custom"
-              className="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-indigo-700 bg-white hover:bg-indigo-50 transition-colors"
+              className="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-pink-700 bg-white hover:bg-pink-50 transition-colors"
             >
               Start Creating Now
               <svg className="ml-2 -mr-1 w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -5,7 +5,7 @@ const { createCanvas } = require('canvas');
 
 // Dimensiuni necesare pentru manifest.json
 const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
-const inputFile = path.join(__dirname, '../public/logo.png');
+const inputFile = path.join(__dirname, '../public/logo.svg');
 const outputDir = path.join(__dirname, '../public/icons');
 
 // Culoare de fundal pentru icoane (rozul din brand)

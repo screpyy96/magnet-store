@@ -62,6 +62,8 @@ export interface Order {
   tracking_number: string | null
   created_at: string
   updated_at: string
+  guest_email?: string | null
+  guest_shipping?: any | null
   shipping_address?: Address
   order_items?: OrderItem[]
   payment_transactions?: PaymentTransaction[]

@@ -54,7 +54,7 @@ self.addEventListener('push', (event) => {
     const title = data.title || defaultTitle;
     const options = {
       body: data.body || defaultBody,
-      icon: '/logo.png',
+      icon: '/logo-mark.svg',
       badge: '/badge.png',
       tag: data.tag || 'notification', // Identificator pentru notificare
       data: {

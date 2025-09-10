@@ -1,13 +1,14 @@
 import Script from 'next/script';
 
 export const OrganizationSchema = () => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://mysweetmagnets.co.uk')
   const schema = {
     "@context": "https://schema.org",
     "@type": "Organization",
     "@id": "#organization",
     "name": "My Sweet Magnets",
     "url": "https://mysweetmagnets.co.uk",
-    "logo": "https://mysweetmagnets.co.uk/images/logo.png",
+    "logo": `${origin}/logo.svg`,
     "sameAs": [
       "https://www.facebook.com/MySweetMagnetsUK",
       "https://www.instagram.com/MySweetMagnetsUK",

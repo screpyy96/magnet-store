@@ -28,14 +28,13 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }) {
 
   const loadAddresses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('shipping_addresses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('is_default', { ascending: false })
-
-      if (error) throw error
-      setAddresses(data)
+      // Fetch via server API to avoid client/session/env issues
+      const res = await fetch('/api/account/addresses', { cache: 'no-store' })
+      if (!res.ok) {
+        throw new Error(`Failed to load addresses: ${res.status}`)
+      }
+      const data = await res.json()
+      setAddresses(Array.isArray(data) ? data : [])
       
       // Auto-select default address
       const defaultAddress = data.find(addr => addr.is_default)
@@ -43,7 +42,7 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }) {
         onAddressSelect(defaultAddress)
       }
     } catch (error) {
-      console.error('Error loading addresses:', error)
+      console.error('Error loading addresses:', error?.message || error, error)
     }
   }
 
@@ -152,7 +151,7 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }) {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">{address.street}</p>
+              <p className="font-medium">{address.address_line1}</p>
               <p className="text-gray-600">
                 {address.city}, {address.postal_code}
               </p>

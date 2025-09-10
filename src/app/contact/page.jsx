@@ -1,8 +1,10 @@
+
 'use client'
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { HiMail, HiPhone, HiLocationMarker, HiClock } from 'react-icons/hi'
+
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -51,15 +53,15 @@ export default function ContactPage() {
     {
       icon: HiMail,
       title: 'Email',
-      details: 'contact@magnetcraft.com',
-      action: 'mailto:contact@magnetcraft.com',
+      details: 'contact@mysweetmagnets.co.uk',
+      action: 'mailto:contact@mysweetmagnets.co.uk',
       actionText: 'Send Email'
     },
     {
       icon: HiPhone,
       title: 'Phone',
-      details: '+40 755 123 456',
-      action: 'tel:+40755123456',
+      details: '07901 145 111',
+      action: 'tel:+447901145111',
       actionText: 'Call Us'
     },
     {
@@ -100,7 +102,7 @@ export default function ContactPage() {
   return (
     <div className="bg-white">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-indigo-600 to-purple-600 overflow-hidden">
+      <div className="relative bg-gradient-to-r from-pink-500 to-purple-600 overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute inset-0" style={{
             backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
@@ -109,10 +111,10 @@ export default function ContactPage() {
         </div>
         <div className="max-w-5xl mx-auto py-16 px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center">
-            <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-4">
+            <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-3">
               Get in Touch
             </h1>
-            <p className="text-lg text-indigo-100 max-w-2xl mx-auto">
+            <p className="text-lg text-pink-50/90 max-w-2xl mx-auto">
               We'd love to hear from you! Send us a message and we'll respond as soon as possible.
             </p>
           </div>
@@ -128,17 +130,17 @@ export default function ContactPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white rounded-lg shadow-lg p-6 flex flex-col items-center text-center"
+              className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center text-center border border-pink-100"
             >
-              <div className="bg-indigo-100 p-3 rounded-full mb-4">
-                <item.icon className="h-6 w-6 text-indigo-600" />
+              <div className="bg-pink-100 p-3 rounded-full mb-4">
+                <item.icon className="h-6 w-6 text-pink-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.title}</h3>
-              <p className="text-gray-600 mb-4">{item.details}</p>
+              <p className="text-gray-700 mb-4">{item.details}</p>
               {item.action && (
                 <a 
                   href={item.action} 
-                  className="text-indigo-600 hover:text-indigo-800 font-medium"
+                  className="text-pink-600 hover:text-purple-600 font-medium"
                   target={item.action.startsWith('http') ? '_blank' : undefined}
                   rel={item.action.startsWith('http') ? 'noopener noreferrer' : undefined}
                 >
@@ -158,9 +160,9 @@ export default function ContactPage() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-lg shadow-lg p-8"
+            className="bg-white/90 backdrop-blur rounded-2xl shadow-xl p-8 border border-pink-100"
           >
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Send Us a Message</h2>
+            <h2 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">Send Us a Message</h2>
             
             {submitSuccess && (
               <div className="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
@@ -183,7 +185,7 @@ export default function ContactPage() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-4 py-2 border border-pink-200 rounded-xl focus:ring-2 focus:ring-pink-300 focus:border-pink-300"
                   required
                 />
               </div>
@@ -196,7 +198,7 @@ export default function ContactPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-4 py-2 border border-pink-200 rounded-xl focus:ring-2 focus:ring-pink-300 focus:border-pink-300"
                   required
                 />
               </div>
@@ -209,7 +211,7 @@ export default function ContactPage() {
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-4 py-2 border border-pink-200 rounded-xl focus:ring-2 focus:ring-pink-300 focus:border-pink-300"
                   required
                 />
               </div>
@@ -222,7 +224,7 @@ export default function ContactPage() {
                   value={formData.message}
                   onChange={handleChange}
                   rows="5"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-4 py-2 border border-pink-200 rounded-xl focus:ring-2 focus:ring-pink-300 focus:border-pink-300"
                   required
                 ></textarea>
               </div>
@@ -230,7 +232,7 @@ export default function ContactPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full bg-indigo-600 text-white py-3 px-4 rounded-md font-medium hover:bg-indigo-700 transition-colors ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-3 px-4 rounded-xl font-semibold hover:opacity-95 transition ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {isSubmitting ? 'Sending...' : 'Send Message'}
               </button>
@@ -242,18 +244,18 @@ export default function ContactPage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-lg shadow-lg overflow-hidden h-full"
+            className="bg-white/90 backdrop-blur rounded-2xl shadow-xl overflow-hidden h-full border border-pink-100"
           >
             <div className="h-full min-h-[400px] w-full bg-gray-200 relative">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2482.391823011403!2d-0.127625!3d51.507351!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x487604b9bf66e2dd%3A0x78a4bf0365b0b3b3!2sLondon%2C%20UK!5e0!3m2!1sen!2sro!4v1709650000000!5m2!1sen!2sro"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d30451.798919034725!2d-2.2700!3d53.4808!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x487bb1bd4b4b3cb1%3A0xeadb2e0d2b4a!2sManchester%2C%20UK!5e0!3m2!1sen!2suk!4v1709650000001"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
                 allowFullScreen=""
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="MagnetCraft Location"
+                title="My Sweet Magnets Location"
                 className="absolute inset-0"
               ></iframe>
             </div>
@@ -296,17 +298,17 @@ export default function ContactPage() {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-indigo-700">
+      <div className="bg-gradient-to-r from-pink-600 to-purple-600">
         <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
           <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             <span className="block">Ready to create your custom magnets?</span>
-            <span className="block text-indigo-200">Start designing today.</span>
+            <span className="block text-pink-100/90">Start designing today.</span>
           </h2>
           <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
             <div className="inline-flex rounded-md shadow">
               <a
                 href="/custom"
-                className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50"
+                className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-pink-700 bg-white hover:bg-pink-50"
               >
                 Get Started
               </a>
@@ -314,7 +316,7 @@ export default function ContactPage() {
             <div className="ml-3 inline-flex rounded-md shadow">
               <a
                 href="/products"
-                className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-pink-600 hover:bg-purple-600"
               >
                 View Products
               </a>
