@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import React from 'react'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/client'
 
 export default function AdminOrderPage({ params }) {
   const unwrappedParams = React.use(params);
@@ -19,7 +18,6 @@ export default function AdminOrderPage({ params }) {
   const [statusUpdateSuccess, setStatusUpdateSuccess] = useState(false)
   const [redirectAttempted, setRedirectAttempted] = useState(false)
   const [previewImage, setPreviewImage] = useState(null)
-  const supabaseClient = createClient()
 
   useEffect(() => {
     // If contextIsAdmin is already true, we can load the order details directly
@@ -254,17 +252,38 @@ export default function AdminOrderPage({ params }) {
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+      case 'processing':
+        return 'bg-blue-100 text-blue-800 border border-blue-200'
       case 'paid':
-        return 'bg-green-100 text-green-800'
+        return 'bg-green-100 text-green-800 border border-green-200'
       case 'shipped':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-purple-100 text-purple-800 border border-purple-200'
       case 'completed':
-        return 'bg-indigo-100 text-indigo-800'
+        return 'bg-indigo-100 text-indigo-800 border border-indigo-200'
       case 'cancelled':
-        return 'bg-red-100 text-red-800'
+        return 'bg-red-100 text-red-800 border border-red-200'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-gray-100 text-gray-800 border border-gray-200'
+    }
+  }
+
+  const getStatusEmoji = (status) => {
+    switch (status) {
+      case 'pending':
+        return '⏳'
+      case 'processing':
+        return '🔄'
+      case 'paid':
+        return '✅'
+      case 'shipped':
+        return '🚚'
+      case 'completed':
+        return '🎉'
+      case 'cancelled':
+        return '❌'
+      default:
+        return '📋'
     }
   }
 
@@ -390,297 +409,394 @@ export default function AdminOrderPage({ params }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Image Preview Modal */}
-      {previewImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
-          <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
-            <div className="absolute top-4 right-4">
-              <button 
-                onClick={() => setPreviewImage(null)}
-                className="bg-white rounded-full p-2 hover:bg-gray-200 focus:outline-none"
-              >
-                <svg className="w-6 h-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="bg-white p-2 rounded-lg">
-              <img src={previewImage.url} alt={previewImage.name} className="max-h-[80vh] mx-auto" />
-              <div className="mt-4 px-4 pb-4 flex justify-between items-center">
-                <div>
-                  <h3 className="font-medium text-gray-900">{previewImage.name}</h3>
-                  {previewImage.size && <p className="text-sm text-gray-500">Size: {previewImage.size}</p>}
-                </div>
-                {previewImage.url && (
-                  <a 
-                    href={previewImage.url} 
-                    download={`magnet-${previewImage.id}.jpg`}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Download
-                  </a>
-                )}
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Image Preview Modal */}
+        {previewImage && (
+          <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
+            <div className="relative max-w-5xl w-full" onClick={e => e.stopPropagation()}>
+              <div className="absolute top-4 right-4 z-10">
+                <button 
+                  onClick={() => setPreviewImage(null)}
+                  className="bg-white rounded-full p-3 hover:bg-gray-100 focus:outline-none shadow-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Order Details</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Order #{order.id.substring(0, 8)}...
-          </p>
-        </div>
-        <div className="mt-4 md:mt-0">
-          <Link
-            href="/admin/orders"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-          >
-            <svg className="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Orders
-          </Link>
-        </div>
-      </div>
-
-      {statusUpdateSuccess && (
-        <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-green-700">
-                Order status updated successfully.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Order Summary */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500">Order Date:</span>
-              <span className="text-sm font-medium">{formatDate(order.created_at)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500">Status:</span>
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(order.status)}`}>
-                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500">Subtotal:</span>
-              <span className="text-sm font-medium">£{order.subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500">Shipping:</span>
-              <span className="text-sm font-medium">£{order.shipping_cost.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between pt-3 border-t border-gray-200">
-              <span className="text-sm font-medium text-gray-900">Total:</span>
-              <span className="text-sm font-bold text-gray-900">£{order.total.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Customer Information */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Customer Information</h2>
-          <div className="space-y-3">
-            <div>
-              <span className="text-sm text-gray-500 block">Name:</span>
-              <span className="text-sm font-medium">{order.shipping_addresses?.full_name || order.guest_full_name || 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500 block">Email:</span>
-              <span className="text-sm font-medium">{order.profiles?.email || order.guest_email || 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500 block">Phone:</span>
-              <span className="text-sm font-medium">{order.shipping_addresses?.phone || order.guest_phone || 'N/A'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Shipping Address */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Shipping Address</h2>
-          {order.shipping_addresses ? (
-            <div className="space-y-1">
-              <p className="text-sm">{order.shipping_addresses.full_name || 'N/A'}</p>
-              <p className="text-sm">{order.shipping_addresses.address_line1 || 'N/A'}</p>
-              {order.shipping_addresses.address_line2 && (
-                <p className="text-sm">{order.shipping_addresses.address_line2}</p>
-              )}
-              <p className="text-sm">
-                {order.shipping_addresses.city || 'N/A'}, {order.shipping_addresses.county || 'N/A'}
-              </p>
-              <p className="text-sm">{order.shipping_addresses.postal_code || 'N/A'}</p>
-              <p className="text-sm">{order.shipping_addresses.phone || 'N/A'}</p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <p className="text-sm">{order.guest_full_name || 'N/A'}</p>
-              <p className="text-sm">{order.guest_address_line1 || 'N/A'}</p>
-              {order.guest_address_line2 && (
-                <p className="text-sm">{order.guest_address_line2}</p>
-              )}
-              <p className="text-sm">{order.guest_city || 'N/A'}, {order.guest_county || 'N/A'}</p>
-              <p className="text-sm">{order.guest_postal_code || 'N/A'}</p>
-              <p className="text-sm">{order.guest_phone || 'N/A'}</p>
-              {order.guest_email && (
-                <p className="text-sm text-gray-500">{order.guest_email}</p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Order Items */}
-      <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-white">
-          <h2 className="text-lg font-bold text-indigo-900 flex items-center">
-            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            Order Items
-            <span className="ml-2 text-sm font-medium bg-indigo-100 text-indigo-800 py-1 px-2 rounded-full">
-              {order.order_items?.length || 0} item{order.order_items?.length !== 1 ? 's' : ''}
-            </span>
-          </h2>
-        </div>
-        <div className="divide-y divide-gray-200">
-          {order.order_items && order.order_items.length > 0 ? (
-            order.order_items.map((item) => (
-              <div key={item.id} className="p-6 flex flex-col md:flex-row gap-6">
-                {/* Image section - make it larger and more visible */}
-                <div className="w-full md:w-72 flex-shrink-0 flex flex-col gap-3">
-                  {(() => {
-                    const imageUrl = getImageUrl(item);
-                    
-                    return imageUrl ? (
-                      <>
-                        {/* Larger image container to show image fully */}
-                        <div className="overflow-hidden rounded-lg shadow-md border border-gray-200 h-auto aspect-square">
-                          <img
-                            src={imageUrl}
-                            alt={item.product_name}
-                            className="w-full h-full object-contain bg-white p-2"
-                            onError={(e) => {
-                              console.error("Error loading image:", e);
-                              e.target.src = "/placeholder-magnet.png";
-                            }}
-                          />
-                        </div>
-                        
-                        {/* Actions row for the image */}
-                        <div className="flex gap-2">
-                          {/* Preview button */}
-                          <button 
-                            onClick={() => setPreviewImage({
-                              url: imageUrl,
-                              name: item.product_name,
-                              id: item.id,
-                              size: item.size
-                            })}
-                            className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-sm font-medium flex items-center justify-center gap-1 transition-colors duration-200"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            Expand
-                          </button>
-                          
-                          {/* Download button */}
-                          <a 
-                            href={imageUrl} 
-                            download={`magnet-${item.id}.jpg`}
-                            className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium flex items-center justify-center gap-1 transition-colors duration-200"
-                            title="Download image"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            Download
-                          </a>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="bg-gray-100 rounded-lg overflow-hidden shadow-md border border-gray-200 h-auto aspect-square flex items-center justify-center">
-                          <div className="flex flex-col items-center justify-center p-4 text-center">
-                            <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span className="text-sm text-gray-500 font-medium">No image available</span>
-                          </div>
-                        </div>
-                        
-                        {/* Disabled download button */}
-                        <button className="p-2 w-full bg-gray-500 text-white rounded-md flex justify-center items-center gap-1 text-sm font-medium opacity-50 cursor-not-allowed">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                          No Image Available
-                        </button>
-                      </>
-                    );
-                  })()}
-                </div>
-                
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">{item.product_name}</h3>
-                  
-                  <div className="grid grid-cols-2 gap-4 mb-3">
-                    <div className="bg-gray-50 rounded-md p-3">
-                      <p className="text-sm text-gray-500 mb-1">
-                        <span className="font-medium">Quantity:</span> {item.quantity}
-                      </p>
-                      {item.size && <p className="text-sm text-gray-500">
-                        <span className="font-medium">Size:</span> {item.size}
-                      </p>}
-                    </div>
-                    <div className="bg-gray-50 rounded-md p-3">
-                      <p className="text-sm text-gray-500 mb-1">
-                        <span className="font-medium">Price per unit:</span> £{parseFloat(item.price_per_unit).toFixed(2)}
-                      </p>
-                      <p className="text-sm font-medium text-gray-700">
-                        <span className="font-medium">Total:</span> £{(item.price_per_unit * item.quantity).toFixed(2)}
-                      </p>
-                    </div>
+              <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+                <img src={previewImage.url} alt={previewImage.name} className="max-h-[80vh] w-full object-contain" />
+                <div className="p-6 flex justify-between items-center bg-gray-50">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-lg">{previewImage.name}</h3>
+                    {previewImage.size && <p className="text-sm text-gray-600 mt-1">Dimensiune: {previewImage.size}</p>}
                   </div>
-                  
-                  {item.special_requirements && (
-                    <div className="bg-indigo-50 p-3 rounded-md border border-indigo-100 mt-2">
-                      <p className="text-sm text-gray-700">
-                        <span className="font-medium text-indigo-700">Special requirements:</span><br />
-                        {item.special_requirements}
-                      </p>
-                    </div>
+                  {previewImage.url && (
+                    <a 
+                      href={previewImage.url} 
+                      download={`magnet-${previewImage.id}.jpg`}
+                      className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center font-medium transition-colors shadow-sm"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Descarcă Imaginea
+                    </a>
                   )}
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="p-6 text-sm text-gray-500 text-center">No items found for this order</div>
-          )}
+            </div>
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-4 sm:mb-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
+                <span className="mr-3">📋</span>
+                Detalii Comandă
+              </h1>
+              <div className="mt-2 flex items-center space-x-4">
+                <p className="text-sm sm:text-base text-gray-600">
+                  ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded">#{order.id.substring(0, 8)}...</span>
+                </p>
+                <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(order.status)}`}>
+                  {getStatusEmoji(order.status)} {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link
+                href="/admin/orders"
+                className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+              >
+                <svg className="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Înapoi la Comenzi
+              </Link>
+              <div className="bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center">
+                <span className="mr-1">🟢</span>
+                Live
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+
+
+
+        {/* Success Message */}
+        {statusUpdateSuccess && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-green-800">
+                  ✅ Statusul comenzii a fost actualizat cu succes!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Info Cards Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Order Summary */}
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl shadow-sm border border-indigo-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-indigo-900 flex items-center">
+                <span className="mr-2">💰</span>
+                Rezumat Comandă
+              </h2>
+              <div className="bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full text-xs font-medium">
+                £{order.total.toFixed(2)}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-indigo-700">📅 Data comenzii:</span>
+                <span className="text-sm font-medium text-indigo-900">{formatDate(order.created_at)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-indigo-700">📊 Status:</span>
+                <span className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${getStatusBadgeClass(order.status)}`}>
+                  {getStatusEmoji(order.status)} {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-indigo-700">💵 Subtotal:</span>
+                <span className="text-sm font-medium text-indigo-900">£{order.subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-indigo-700">🚚 Livrare:</span>
+                <span className="text-sm font-medium text-indigo-900">
+                  {order.shipping_cost > 0 ? `£${order.shipping_cost.toFixed(2)}` : 'GRATUITĂ'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t border-indigo-200">
+                <span className="text-sm font-semibold text-indigo-900">💎 Total:</span>
+                <span className="text-lg font-bold text-indigo-900">£{order.total.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Information */}
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-sm border border-green-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-green-900 flex items-center">
+                <span className="mr-2">👤</span>
+                Informații Client
+              </h2>
+              <div className="bg-green-200 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                {order.user_id ? 'Înregistrat' : 'Guest'}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm text-green-700 block mb-1">👨‍💼 Nume:</span>
+                <span className="text-sm font-medium text-green-900">{order.shipping_addresses?.full_name || order.guest_full_name || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-green-700 block mb-1">📧 Email:</span>
+                <span className="text-sm font-medium text-green-900 break-all">{order.profiles?.email || order.guest_email || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-sm text-green-700 block mb-1">📱 Telefon:</span>
+                <span className="text-sm font-medium text-green-900">{order.shipping_addresses?.phone || order.guest_phone || 'N/A'}</span>
+              </div>
+              {order.user_id && (
+                <div className="mt-3 pt-3 border-t border-green-200">
+                  <span className="text-xs text-green-600 bg-green-200 px-2 py-1 rounded-full">
+                    ✅ Client cu cont înregistrat
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Shipping Address */}
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-sm border border-purple-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-purple-900 flex items-center">
+                <span className="mr-2">🏠</span>
+                Adresa de Livrare
+              </h2>
+              <div className="bg-purple-200 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                UK
+              </div>
+            </div>
+            {order.shipping_addresses ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-purple-900">{order.shipping_addresses.full_name || 'N/A'}</p>
+                <p className="text-sm text-purple-800">{order.shipping_addresses.address_line1 || 'N/A'}</p>
+                {order.shipping_addresses.address_line2 && (
+                  <p className="text-sm text-purple-800">{order.shipping_addresses.address_line2}</p>
+                )}
+                <p className="text-sm text-purple-800">
+                  {order.shipping_addresses.city || 'N/A'}, {order.shipping_addresses.county || 'N/A'}
+                </p>
+                <p className="text-sm font-medium text-purple-900">{order.shipping_addresses.postal_code || 'N/A'}</p>
+                <p className="text-sm text-purple-800">📞 {order.shipping_addresses.phone || 'N/A'}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-purple-900">{order.guest_full_name || 'N/A'}</p>
+                <p className="text-sm text-purple-800">{order.guest_address_line1 || 'N/A'}</p>
+                {order.guest_address_line2 && (
+                  <p className="text-sm text-purple-800">{order.guest_address_line2}</p>
+                )}
+                <p className="text-sm text-purple-800">{order.guest_city || 'N/A'}, {order.guest_county || 'N/A'}</p>
+                <p className="text-sm font-medium text-purple-900">{order.guest_postal_code || 'N/A'}</p>
+                <p className="text-sm text-purple-800">📞 {order.guest_phone || 'N/A'}</p>
+                {order.guest_email && (
+                  <p className="text-sm text-purple-700">📧 {order.guest_email}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Order Items */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+          <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-orange-900 flex items-center">
+                <span className="mr-3">🛍️</span>
+                Produse Comandate
+              </h2>
+              <div className="flex items-center space-x-3">
+                <span className="bg-orange-200 text-orange-800 py-1 px-3 rounded-full text-sm font-medium">
+                  {order.order_items?.length || 0} {order.order_items?.length === 1 ? 'produs' : 'produse'}
+                </span>
+                <span className="bg-white text-orange-900 py-1 px-3 rounded-full text-sm font-semibold shadow-sm">
+                  Total: £{order.total.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {order.order_items && order.order_items.length > 0 ? (
+              order.order_items.map((item, index) => (
+                <div key={item.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Image section */}
+                    <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4">
+                      {(() => {
+                        const imageUrl = getImageUrl(item);
+                        
+                        return imageUrl ? (
+                          <>
+                            {/* Product number badge */}
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                                Produs #{index + 1}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                ID: {item.id.substring(0, 8)}
+                              </span>
+                            </div>
+                            
+                            {/* Image container */}
+                            <div className="relative overflow-hidden rounded-xl shadow-lg border-2 border-gray-200 aspect-square bg-white">
+                              <img
+                                src={imageUrl}
+                                alt={item.product_name}
+                                className="w-full h-full object-contain p-3"
+                                onError={(e) => {
+                                  console.error("Error loading image:", e);
+                                  e.target.src = "/placeholder-magnet.png";
+                                }}
+                              />
+                              <div className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-sm">
+                                <span className="text-xs">🧲</span>
+                              </div>
+                            </div>
+                            
+                            {/* Action buttons */}
+                            <div className="grid grid-cols-2 gap-2">
+                              <button 
+                                onClick={() => setPreviewImage({
+                                  url: imageUrl,
+                                  name: item.product_name,
+                                  id: item.id,
+                                  size: item.size
+                                })}
+                                className="py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium flex items-center justify-center gap-1 transition-colors"
+                              >
+                                <span>🔍</span>
+                                Previzualizare
+                              </button>
+                              
+                              <a 
+                                href={imageUrl} 
+                                download={`magnet-${item.id}.jpg`}
+                                className="py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-1 transition-colors"
+                              >
+                                <span>⬇️</span>
+                                Descarcă
+                              </a>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+                                Produs #{index + 1}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                ID: {item.id.substring(0, 8)}
+                              </span>
+                            </div>
+                            
+                            <div className="bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 aspect-square flex items-center justify-center">
+                              <div className="text-center p-4">
+                                <div className="text-4xl mb-2">📷</div>
+                                <span className="text-sm text-gray-500 font-medium">Fără imagine</span>
+                              </div>
+                            </div>
+                            
+                            <button className="py-2 px-3 w-full bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed">
+                              <span className="mr-1">⚠️</span>
+                              Imagine indisponibilă
+                            </button>
+                          </>
+                        );
+                      })()}
+                    </div>
+                    
+                    {/* Product details */}
+                    <div className="flex-1">
+                      <div className="mb-4">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2 flex items-center">
+                          <span className="mr-2">🧲</span>
+                          {item.product_name}
+                        </h3>
+                        <div className="flex items-center space-x-2">
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                            Magnet personalizat
+                          </span>
+                          {item.size && (
+                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                              📏 {item.size}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-blue-900">📦 Cantitate</span>
+                            <span className="text-lg font-bold text-blue-900">{item.quantity}</span>
+                          </div>
+                          <div className="text-xs text-blue-700">
+                            {item.quantity === 1 ? 'Bucată' : 'Bucăți'}
+                          </div>
+                        </div>
+                        
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-green-900">💰 Preț/bucată</span>
+                            <span className="text-lg font-bold text-green-900">£{parseFloat(item.price_per_unit).toFixed(2)}</span>
+                          </div>
+                          <div className="text-xs text-green-700">
+                            Total: £{(item.price_per_unit * item.quantity).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {item.special_requirements && (
+                        <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-4 rounded-xl border border-amber-200">
+                          <div className="flex items-start">
+                            <span className="text-lg mr-2">📝</span>
+                            <div>
+                              <h4 className="font-medium text-amber-900 mb-1">Cerințe speciale:</h4>
+                              <p className="text-sm text-amber-800 leading-relaxed">
+                                {item.special_requirements}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-12 text-center">
+                <div className="text-6xl mb-4">📭</div>
+                <h4 className="text-lg font-medium text-gray-900 mb-2">Nu există produse</h4>
+                <p className="text-gray-500">Această comandă nu conține produse</p>
+              </div>
+            )}
+          </div>
+        </div>
 
       {/* Payment Information */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
@@ -895,5 +1011,6 @@ export default function AdminOrderPage({ params }) {
         </div>
       </div>
     </div>
+  </div>
   )
 } 

@@ -1,11 +1,10 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function DeletionRequestsPage() {
-  const { user } = useAuth()
+  const { user, supabase } = useAuth()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   

@@ -89,3 +89,64 @@ SELECT
     SUM(total) as total_revenue
 FROM orders
 GROUP BY customer_type;
+
+-- 8. Detalii complete comenzi GUEST cu imagini
+SELECT 
+    o.id as order_id,
+    o.guest_email,
+    o.guest_full_name,
+    o.guest_phone,
+    o.guest_address_line1,
+    o.guest_city,
+    o.guest_county,
+    o.guest_postal_code,
+    o.total as order_total,
+    o.payment_status,
+    o.payment_intent_id,
+    oi.product_name,
+    oi.image_url,
+    oi.size,
+    oi.price_per_unit,
+    oi.special_requirements,
+    o.created_at
+FROM orders o
+JOIN order_items oi ON o.id = oi.order_id
+WHERE o.user_id IS NULL  -- Doar comenzi guest
+ORDER BY o.created_at DESC, oi.product_name;
+
+-- 9. Verifică comenzile guest fără detalii complete (problematic)
+SELECT 
+    id,
+    guest_email,
+    guest_full_name,
+    guest_city,
+    total,
+    payment_status,
+    created_at,
+    CASE 
+        WHEN guest_email IS NULL THEN '❌ Missing email'
+        WHEN guest_full_name IS NULL THEN '❌ Missing name'
+        WHEN guest_address_line1 IS NULL THEN '❌ Missing address'
+        WHEN guest_city IS NULL THEN '❌ Missing city'
+        WHEN guest_phone IS NULL THEN '⚠️ Missing phone'
+        ELSE '✅ Complete'
+    END as data_status
+FROM orders
+WHERE user_id IS NULL
+ORDER BY created_at DESC;
+
+-- 10. Comenzi guest cu număr de imagini
+SELECT 
+    o.id,
+    o.guest_email,
+    o.guest_full_name,
+    o.total,
+    o.payment_status,
+    COUNT(oi.id) as image_count,
+    STRING_AGG(oi.product_name, ', ') as products,
+    o.created_at
+FROM orders o
+LEFT JOIN order_items oi ON o.id = oi.order_id
+WHERE o.user_id IS NULL
+GROUP BY o.id, o.guest_email, o.guest_full_name, o.total, o.payment_status, o.created_at
+ORDER BY o.created_at DESC;

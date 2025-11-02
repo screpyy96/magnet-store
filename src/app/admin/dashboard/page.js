@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 // Temporarily disabled - notifications will be implemented later
 // import AdminNotificationSubscription from '@/components/admin/AdminNotificationSubscription'
@@ -328,55 +327,118 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Manage your store, orders, and customers.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+              <span className="mr-3">👋</span>
+              Bună ziua, Admin!
+            </h1>
+            <p className="mt-2 text-lg text-gray-600">
+              Iată o privire de ansamblu asupra magazinului tău MySweetMagnets
+            </p>
+          </div>
+          <div className="hidden md:flex items-center space-x-4">
+            <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+              🟢 Sistem Activ
+            </div>
+            <div className="text-sm text-gray-500">
+              Ultima actualizare: {new Date().toLocaleTimeString('ro-RO')}
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
-        <h3 className="text-lg font-medium mb-2">Notificări Admin</h3>
-        <p className="text-sm text-gray-600 mb-2">
-          Primești notificări instant când sunt plasate comenzi noi sau când apar cereri importante.
-        </p>
-        {/* Temporarily disabled - notifications will be implemented later */}
-        {/* <AdminNotificationSubscription /> */}
-        <p className="text-sm text-gray-500 italic">
-          Notificările vor fi implementate în curând...
-        </p>
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl shadow-sm border border-blue-200 mb-8">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center">
+            <div className="bg-blue-100 p-3 rounded-full mr-4">
+              <span className="text-2xl">🔔</span>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-blue-900 mb-1">Notificări Admin</h3>
+              <p className="text-blue-700 mb-2">
+                Primești notificări instant pentru comenzi noi și cereri importante
+              </p>
+              <div className="flex items-center text-sm text-blue-600">
+                <span className="mr-2">🚀</span>
+                <span className="italic">Funcționalitatea va fi disponibilă în curând...</span>
+              </div>
+            </div>
+          </div>
+          <div className="bg-blue-200 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+            În dezvoltare
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500 mb-1">Comenzi Totale</h3>
-          <p className="text-3xl font-bold text-gray-900">{stats.totalOrders}</p>
-          <div className="mt-2 text-xs text-gray-600">Toate comenzile</div>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl shadow-sm border border-purple-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="bg-purple-500 p-2 rounded-lg">
+              <span className="text-white text-lg">📦</span>
+            </div>
+            <div className="text-purple-600 text-sm font-medium">Total</div>
+          </div>
+          <h3 className="text-sm font-medium text-purple-700 mb-1">Comenzi Totale</h3>
+          <p className="text-3xl font-bold text-purple-900">{stats.totalOrders}</p>
+          <div className="mt-2 text-xs text-purple-600">Toate comenzile procesate</div>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500 mb-1">Vânzări Totale</h3>
-          <p className="text-3xl font-bold text-gray-900">£{stats.totalSales.toFixed(2)}</p>
-          <div className="mt-2 text-xs text-gray-600">Valoarea totală</div>
+        <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl shadow-sm border border-green-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="bg-green-500 p-2 rounded-lg">
+              <span className="text-white text-lg">💰</span>
+            </div>
+            <div className="text-green-600 text-sm font-medium">Revenue</div>
+          </div>
+          <h3 className="text-sm font-medium text-green-700 mb-1">Vânzări Totale</h3>
+          <p className="text-3xl font-bold text-green-900">£{stats.totalSales.toFixed(2)}</p>
+          <div className="mt-2 text-xs text-green-600">Valoarea totală încasată</div>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500 mb-1">Clienți Noi</h3>
-          <p className="text-3xl font-bold text-gray-900">{stats.newCustomers}</p>
-          <div className="mt-2 text-xs text-gray-600">Ultima lună</div>
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-sm border border-blue-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="bg-blue-500 p-2 rounded-lg">
+              <span className="text-white text-lg">👥</span>
+            </div>
+            <div className="text-blue-600 text-sm font-medium">Noi</div>
+          </div>
+          <h3 className="text-sm font-medium text-blue-700 mb-1">Clienți Noi</h3>
+          <p className="text-3xl font-bold text-blue-900">{stats.newCustomers}</p>
+          <div className="mt-2 text-xs text-blue-600">Înregistrați luna aceasta</div>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500 mb-1">Comenzi în Așteptare</h3>
-          <p className="text-3xl font-bold text-gray-900">{stats.pendingOrders}</p>
-          <div className="mt-2 text-xs text-amber-600">Necesită procesare</div>
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl shadow-sm border border-orange-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="bg-orange-500 p-2 rounded-lg">
+              <span className="text-white text-lg">⏳</span>
+            </div>
+            <div className="text-orange-600 text-sm font-medium">Urgent</div>
+          </div>
+          <h3 className="text-sm font-medium text-orange-700 mb-1">Comenzi în Așteptare</h3>
+          <p className="text-3xl font-bold text-orange-900">{stats.pendingOrders}</p>
+          <div className="mt-2 text-xs text-orange-600">
+            {stats.pendingOrders > 0 ? '🔥 Necesită atenție!' : '✅ Totul la zi'}
+          </div>
         </div>
       </div>
       
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-lg font-medium mb-4">Vânzări După Lună</h3>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <span className="mr-2">📊</span>
+                Vânzări După Lună
+              </h3>
+              <p className="text-sm text-gray-600">Evoluția veniturilor în timp</p>
+            </div>
+            <div className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium">
+              £ GBP
+            </div>
+          </div>
           {stats.salesByMonth.length === 0 ? (
             <div className="h-80 flex items-center justify-center text-gray-500">
               Nu există date suficiente pentru afișarea graficului
@@ -397,8 +459,19 @@ export default function AdminDashboard() {
           )}
         </div>
         
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-lg font-medium mb-4">Număr Comenzi pe Lună</h3>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <span className="mr-2">📈</span>
+                Număr Comenzi pe Lună
+              </h3>
+              <p className="text-sm text-gray-600">Trendul comenzilor în timp</p>
+            </div>
+            <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+              Comenzi
+            </div>
+          </div>
           {stats.salesByMonth.length === 0 ? (
             <div className="h-80 flex items-center justify-center text-gray-500">
               Nu există date suficiente pentru afișarea graficului
@@ -421,18 +494,30 @@ export default function AdminDashboard() {
       </div>
       
       {/* Recent Orders */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium">Comenzi Recente</h3>
-          <Link href="/admin/orders" className="text-indigo-600 hover:text-indigo-800 text-sm">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <span className="mr-2">🛍️</span>
+              Comenzi Recente
+            </h3>
+            <p className="text-sm text-gray-600">Ultimele comenzi plasate de clienți</p>
+          </div>
+          <Link 
+            href="/admin/orders" 
+            className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center"
+          >
+            <span className="mr-1">👀</span>
             Vezi toate
           </Link>
         </div>
         
         <div className="overflow-x-auto">
           {stats.recentOrders.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">
-              Nu există comenzi recente
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">📭</div>
+              <h4 className="text-lg font-medium text-gray-900 mb-2">Nu există comenzi recente</h4>
+              <p className="text-gray-500">Comenzile vor apărea aici când clienții plasează comenzi noi</p>
             </div>
           ) : (
             <table className="min-w-full">
@@ -477,63 +562,88 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Link href="/admin/orders" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 rounded-md bg-indigo-100 p-3">
-              <svg className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+          <span className="mr-2">🚀</span>
+          Acțiuni Rapide
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Link href="/admin/orders" className="group bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl shadow-sm p-6 hover:shadow-lg transition-all duration-200 border border-indigo-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-indigo-500 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                <span className="text-white text-xl">📋</span>
+              </div>
+              <div className="text-indigo-600 text-sm font-medium bg-indigo-200 px-2 py-1 rounded-full">
+                {stats.totalOrders} total
+              </div>
             </div>
-            <div className="ml-5">
-              <h3 className="text-lg font-medium text-gray-900">Gestionare Comenzi</h3>
-              <p className="text-sm text-gray-500">Vizualizează și actualizează statusul comenzilor</p>
-            </div>
-            <div className="ml-auto">
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <h3 className="text-lg font-semibold text-indigo-900 mb-2">Gestionare Comenzi</h3>
+            <p className="text-indigo-700 text-sm mb-3">Vizualizează și actualizează statusul comenzilor</p>
+            <div className="flex items-center text-indigo-600 text-sm font-medium">
+              <span className="mr-1">Accesează</span>
+              <svg className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-          </div>
-        </Link>
+          </Link>
 
-        <Link href="/admin/deletion-requests" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 rounded-md bg-red-100 p-3">
-              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+          <Link href="/admin/deletion-requests" className="group bg-gradient-to-br from-red-50 to-red-100 rounded-xl shadow-sm p-6 hover:shadow-lg transition-all duration-200 border border-red-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-red-500 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                <span className="text-white text-xl">🗑️</span>
+              </div>
+              <div className="text-red-600 text-sm font-medium bg-red-200 px-2 py-1 rounded-full">
+                GDPR
+              </div>
             </div>
-            <div className="ml-5">
-              <h3 className="text-lg font-medium text-gray-900">Cereri Ștergere Conturi</h3>
-              <p className="text-sm text-gray-500">Gestionează cererile de ștergere conturi</p>
-            </div>
-            <div className="ml-auto">
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <h3 className="text-lg font-semibold text-red-900 mb-2">Cereri Ștergere</h3>
+            <p className="text-red-700 text-sm mb-3">Gestionează cererile de ștergere conturi GDPR</p>
+            <div className="flex items-center text-red-600 text-sm font-medium">
+              <span className="mr-1">Verifică</span>
+              <svg className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-          </div>
-        </Link>
+          </Link>
 
-        <Link href="/admin/customers" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 rounded-md bg-purple-100 p-3">
-              <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+          <Link href="/admin/customers" className="group bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-sm p-6 hover:shadow-lg transition-all duration-200 border border-purple-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-purple-500 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                <span className="text-white text-xl">👥</span>
+              </div>
+              <div className="text-purple-600 text-sm font-medium bg-purple-200 px-2 py-1 rounded-full">
+                {stats.newCustomers} noi
+              </div>
             </div>
-            <div className="ml-5">
-              <h3 className="text-lg font-medium text-gray-900">Gestionare Clienți</h3>
-              <p className="text-sm text-gray-500">Vizualizează informații despre clienți</p>
-            </div>
-            <div className="ml-auto">
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <h3 className="text-lg font-semibold text-purple-900 mb-2">Gestionare Clienți</h3>
+            <p className="text-purple-700 text-sm mb-3">Vizualizează și gestionează informații clienți</p>
+            <div className="flex items-center text-purple-600 text-sm font-medium">
+              <span className="mr-1">Explorează</span>
+              <svg className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* Footer Info */}
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="bg-gray-200 p-2 rounded-lg mr-3">
+              <span className="text-lg">ℹ️</span>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900">MySweetMagnets Admin Panel</h4>
+              <p className="text-sm text-gray-600">Gestionează magazinul tău de magneți personalizați</p>
+            </div>
           </div>
-        </Link>
+          <div className="text-right">
+            <div className="text-sm text-gray-500">Versiunea 1.0</div>
+            <div className="text-xs text-gray-400">Ultima actualizare: Noiembrie 2024</div>
+          </div>
+        </div>
       </div>
     </div>
   )
