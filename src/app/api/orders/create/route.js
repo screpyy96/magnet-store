@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createServiceRoleClient } from '@/utils/supabase/service-role'
 import { getStripe } from '@/lib/stripe-server'
 
 export const runtime = 'nodejs'
@@ -53,9 +53,9 @@ export async function POST(request) {
     
     // userId is optional to support guest checkout
 
-    // Create Supabase client
-    console.log('Creating Supabase client...');
-    const supabase = await createClient()
+    // Create Supabase client with service role to bypass RLS for guest orders
+    console.log('Creating Supabase service role client...');
+    const supabase = createServiceRoleClient()
     console.log('Supabase client created successfully');
 
     // Use the provided userId

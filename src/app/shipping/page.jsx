@@ -6,25 +6,18 @@ import { FaTruck, FaClock, FaMapMarkerAlt, FaBox, FaShieldAlt, FaCheckCircle } f
 export default function ShippingPage() {
   const shippingOptions = [
     {
-      name: "Standard UK Delivery",
-      price: "£2.99",
-      time: "3-5 business days",
-      description: "Reliable Royal Mail delivery to all UK addresses",
-      icon: <FaTruck className="h-6 w-6" />
-    },
-    {
-      name: "Express UK Delivery",
-      price: "£4.99",
-      time: "1-2 business days",
-      description: "Fast delivery for when you need your magnets quickly",
-      icon: <FaClock className="h-6 w-6" />
-    },
-    {
       name: "Free UK Delivery",
       price: "FREE",
-      time: "3-5 business days",
-      description: "Free delivery on orders over £25",
+      time: "",
+      description: "Free delivery on all UK orders",
       icon: <FaCheckCircle className="h-6 w-6" />
+    },
+    {
+      name: "International Delivery",
+      price: "£9.99+",
+      time: "7-14 business days",
+      description: "Worldwide shipping available",
+      icon: <FaTruck className="h-6 w-6" />
     }
   ]
 
@@ -88,7 +81,7 @@ export default function ShippingPage() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16 max-w-4xl mx-auto">
           {shippingOptions.map((option, index) => (
             <motion.div
               key={option.name}
@@ -167,7 +160,7 @@ export default function ShippingPage() {
               <ul className="space-y-1 text-sm opacity-90">
                 <li>• Signature may be required for orders over £50</li>
                 <li>• We cannot deliver to PO Box addresses</li>
-                <li>• International shipping not available</li>
+                <li>• International shipping available worldwide</li>
               </ul>
             </div>
           </div>
@@ -189,7 +182,7 @@ export default function ShippingPage() {
                 When will I receive my order?
               </h4>
               <p className="text-gray-600">
-                Most orders arrive within 3-5 business days. Express delivery takes 1-2 business days. We'll email you tracking information once your order ships.
+                Most UK orders arrive within 3-5 business days. International orders take 7-14 business days. We'll email you tracking information once your order ships.
               </p>
             </div>
             <div>
@@ -197,7 +190,7 @@ export default function ShippingPage() {
                 Do you ship internationally?
               </h4>
               <p className="text-gray-600">
-                Currently, we only ship within the UK (including Northern Ireland, Isle of Man, and Channel Islands). We're working on expanding our shipping options.
+                Yes! We ship worldwide. International shipping starts at £9.99 and typically takes 7-14 business days depending on your location.
               </p>
             </div>
             <div>

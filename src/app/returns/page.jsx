@@ -222,14 +222,10 @@ export default function ReturnsPage() {
           <p className="text-lg mb-6 opacity-90">
             Our customer service team is here to help with any questions about returns or refunds.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">Email Us</h4>
               <p className="opacity-90">returns@mysweetmagnets.co.uk</p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">Call Us</h4>
-              <p className="opacity-90">0800 123 4567</p>
             </div>
             <div>
               <h4 className="font-semibold mb-2">Live Chat</h4>

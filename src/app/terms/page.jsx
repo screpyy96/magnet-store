@@ -280,7 +280,7 @@ export default function TermsPage() {
           <p className="text-lg mb-6 opacity-90">
             These Terms shall be governed by and construed in accordance with the laws of England and Wales. Any disputes arising from these Terms or your use of our services shall be subject to the exclusive jurisdiction of the courts of England and Wales.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">Legal Contact</h4>
               <p className="opacity-90">legal@mysweetmagnets.co.uk</p>
@@ -288,10 +288,6 @@ export default function TermsPage() {
             <div>
               <h4 className="font-semibold mb-2">General Contact</h4>
               <p className="opacity-90">hello@mysweetmagnets.co.uk</p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">Phone</h4>
-              <p className="opacity-90">0800 123 4567</p>
             </div>
           </div>
         </motion.div>

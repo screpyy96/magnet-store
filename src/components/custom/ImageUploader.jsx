@@ -45,57 +45,50 @@ export default function ImageUploader({ onFileChange, maxFiles = 10 }) {
   });
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-2 md:p-4">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Images</h2>
-      {maxFiles && (
-        <p className="text-sm text-gray-500 mb-4">
-          Maximum {maxFiles} {maxFiles === 1 ? 'file' : 'files'}
-        </p>
-      )}
-      
+    <div>
       <div
         {...getRootProps()}
         className={`
-          border-2 border-dashed rounded-xl p-8
+          border-2 border-dashed rounded-xl p-6 lg:p-8
           flex flex-col items-center justify-center
-          cursor-pointer transition-colors duration-200
+          cursor-pointer transition-all duration-200
           ${isDragActive 
-            ? 'border-indigo-500 bg-indigo-50' 
-            : 'border-gray-300 hover:border-indigo-400 hover:bg-gray-50'
+            ? 'border-pink-500 bg-pink-50 scale-[1.02]' 
+            : 'border-pink-300 hover:border-pink-400 hover:bg-pink-50/50 bg-gradient-to-br from-pink-50 to-orange-50'
           }
         `}
       >
         <input {...getInputProps()} />
         
         <div className="text-center">
+          {/* Icon */}
           <svg
-            className={`mx-auto h-12 w-12 ${isDragActive ? 'text-indigo-500' : 'text-gray-400'}`}
-            stroke="currentColor"
+            className={`mx-auto h-10 w-10 lg:h-12 lg:w-12 mb-2 ${isDragActive ? 'text-pink-500' : 'text-gray-400'}`}
             fill="none"
-            viewBox="0 0 48 48"
-            aria-hidden="true"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
           
-          <div className="mt-4">
+          <div>
             <motion.p 
-              className="text-lg text-gray-700"
+              className="text-sm lg:text-base font-medium text-gray-900"
               animate={{ scale: isDragActive ? 1.05 : 1 }}
             >
               {isDragActive 
-                ? 'Drop your images here...' 
-                : 'Drag & drop your images here, or click to select'}
+                ? 'Drop photos here' 
+                : 'Tap to upload photos'}
             </motion.p>
-            <p className="mt-2 text-sm text-gray-600">
-              {isDragActive
-                ? 'Drop the files here...'
-                : `Drag and drop your images here, or click to select files${maxFiles ? ` (max ${maxFiles})` : ''}`
+            <p className="mt-1 text-xs text-gray-500">
+              {maxFiles 
+                ? `Up to ${maxFiles} ${maxFiles === 1 ? 'photo' : 'photos'} • JPG, PNG • Max 10MB`
+                : 'JPG, PNG • Max 10MB each'
               }
             </p>
           </div>

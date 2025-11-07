@@ -23,9 +23,9 @@ export const OrganizationSchema = () => {
     },
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": "123 Magnet Street",
-      "addressLocality": "Manchester",
-      "postalCode": "M1 1AA",
+      "streetAddress": "London",
+      "addressLocality": "London",
+      "postalCode": "EC1A 1BB",
       "addressCountry": "GB"
     },
     "priceRange": "££",
@@ -34,7 +34,7 @@ export const OrganizationSchema = () => {
       "name": "Emma Johnson"
     },
     "foundingDate": "2020-01-01",
-    "description": "UK's leading custom photo magnets, handcrafted with love in Manchester. Create beautiful fridge magnets from your photos with our easy online designer."
+    "description": "UK's leading custom photo magnets, handcrafted with love in London. Create beautiful fridge magnets from your photos with our easy online designer."
   };
 
   return (

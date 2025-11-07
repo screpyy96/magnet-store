@@ -51,3 +51,19 @@ body {
   min-height: 200px;
 }
 
+/* Hide scrollbars globally but keep functionality */
+.hide-scrollbar,
+.overflow-x-auto,
+.overflow-y-auto,
+.overflow-auto {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar {
+  display: none;
+}
+

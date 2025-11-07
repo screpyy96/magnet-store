@@ -62,13 +62,6 @@ export default function DeliveryInfo() {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="text-gray-700">Next Day Delivery</span>
-            </div>
-            <span className="font-medium text-gray-900">£4.99</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
               <span className="text-gray-700">International</span>
             </div>

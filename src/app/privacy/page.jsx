@@ -273,10 +273,7 @@ export default function PrivacyPage() {
               Email: privacy@mysweetmagnets.co.uk
             </p>
             <p className="text-gray-900 font-medium">
-              Phone: 0800 123 4567
-            </p>
-            <p className="text-gray-900 font-medium">
-              Address: My Sweet Magnets Ltd, Manchester, UK
+              Address: My Sweet Magnets Ltd, London, UK
             </p>
           </div>
         </motion.div>

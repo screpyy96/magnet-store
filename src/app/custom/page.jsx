@@ -381,18 +381,28 @@ export default function Custom() {
   return (
     <div className="bg-pink-50 min-h-screen">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-2xl font-bold text-gray-900">Create Your Custom Magnets</h1>
-          <p className="text-gray-600 mt-2">Upload your photos and we'll turn them into beautiful magnets</p>
+      <div className="bg-gradient-to-r from-pink-500 to-orange-500 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 lg:py-4">
+          <h1 className="text-lg lg:text-2xl font-bold text-white">
+            Custom Photo Magnets
+          </h1>
+          <p className="text-pink-100 text-xs lg:text-sm mt-1">Turn your photos into magnets</p>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left column: Options */}
-          <div className="space-y-6 order-2 lg:order-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
+        {/* Mobile: Package Selection at top - compact */}
+        <div className="lg:hidden mb-4">
+          <PackageSelector 
+            selectedPackage={selectedPackage}
+            onPackageSelect={handlePackageSelect}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
+          {/* Left column: Options - Desktop only */}
+          <div className="hidden lg:block space-y-6">
             {/* Package Selection */}
             <PackageSelector 
               selectedPackage={selectedPackage}
@@ -412,10 +422,21 @@ export default function Custom() {
           </div>
 
           {/* Right column: Preview & Upload */}
-          <div className="space-y-6 order-1 lg:order-2">
+          <div className="space-y-4 lg:space-y-6">
+            {/* Package Progress - Mobile (only show if has images or package > 1) */}
+            {selectedPackage && packageImages.length > 0 && (
+              <div className="lg:hidden bg-white rounded-xl shadow-sm border border-pink-200 p-4">
+                <PackageProgress 
+                  selectedPackage={selectedPackage}
+                  currentPackageImages={packageImages}
+                  imagesForCurrentPackageCount={packageImages.length}
+                />
+              </div>
+            )}
+
             {/* Design Preview */}
-            <div className="bg-white rounded-xl shadow-sm border border-pink-200 p-6">
-              <h2 className="text-xl font-semibold text-pink-900 mb-4">Design Preview</h2>
+            <div className="bg-white rounded-xl shadow-sm border border-pink-200 p-4 lg:p-6">
+              <h2 className="text-lg lg:text-xl font-semibold text-pink-900 mb-3 lg:mb-4">Design Preview</h2>
               
               <MagnetPreview 
                 imageUrl={currentImage}
@@ -441,9 +462,9 @@ export default function Custom() {
                 </div>
               )}
               
-              {/* Package Progress */}
+              {/* Package Progress - Desktop */}
               {selectedPackage && (
-                <div className="mt-4">
+                <div className="hidden lg:block mt-4">
                   <PackageProgress 
                     selectedPackage={selectedPackage}
                     currentPackageImages={packageImages}
@@ -453,20 +474,17 @@ export default function Custom() {
               )}
               
               {/* Action Buttons */}
-              <div className="mt-6 space-y-3">
+              <div className="mt-4 lg:mt-6 space-y-3">
                 {!selectedPackage ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600 mb-4">Please select a package to start creating your custom magnets</p>
+                  <div className="text-center py-6 lg:py-8">
+                    <p className="text-sm text-gray-600">Select a package above to start</p>
                   </div>
                 ) : packageImages.length === selectedPackage.maxFiles ? (
                   <button
                     onClick={handleAddToCart}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 lg:py-4 px-4 rounded-lg transition-all shadow-md"
                   >
-                    <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m6 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-                    </svg>
-                    Add Package to Cart - £{selectedPackage.price.toFixed(2)}
+                    Add to Cart - £{selectedPackage.price.toFixed(2)}
                   </button>
                 ) : (
                   <UploadArea 
@@ -479,9 +497,9 @@ export default function Custom() {
                 {selectedPackage && packageImages.length > 0 && packageImages.length < selectedPackage.maxFiles && (
                   <button
                     onClick={() => document.querySelector('input[type="file"]')?.click()}
-                    className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                    className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium py-2.5 px-4 rounded-lg transition-all"
                   >
-                    Add More Images ({selectedPackage.maxFiles - packageImages.length} remaining)
+                    Add More ({selectedPackage.maxFiles - packageImages.length} left)
                   </button>
                 )}
                 
@@ -495,12 +513,21 @@ export default function Custom() {
                     }}
                     className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors text-sm"
                   >
-                    Clear All Images
+                    Clear All
                   </button>
                 )}
-                
-                
               </div>
+            </div>
+
+            {/* Mobile: Customize Options at bottom */}
+            <div className="lg:hidden bg-white rounded-xl shadow-sm border border-pink-200 p-4">
+              <h3 className="text-base font-medium text-pink-900 mb-3">Customize</h3>
+              <ProductOptions
+                selectedSize={selectedSize}
+                selectedFinish={selectedFinish}
+                onSizeChange={setSelectedSize}
+                onFinishChange={setSelectedFinish}
+              />
             </div>
           </div>
         </div>

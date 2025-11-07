@@ -32,8 +32,8 @@ export default function ImageEditor({ file, onSave, onCancel }) {
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
       
-      // Set canvas size to 500x500 for consistent magnet size
-      const size = 500
+      // Set canvas size to 2000x2000 for high quality print (400 DPI at 5x5cm)
+      const size = 2000
       canvas.width = size
       canvas.height = size
       
@@ -70,7 +70,8 @@ export default function ImageEditor({ file, onSave, onCancel }) {
       
       ctx.restore()
       
-      return canvas.toDataURL('image/jpeg', 0.95);
+      // Use PNG for lossless quality, or JPEG at maximum quality
+      return canvas.toDataURL('image/png');
     } catch (e) {
       return null
     }

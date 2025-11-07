@@ -58,17 +58,10 @@ export default function ContactPage() {
       actionText: 'Send Email'
     },
     {
-      icon: HiPhone,
-      title: 'Phone',
-      details: '07901 145 111',
-      action: 'tel:+447901145111',
-      actionText: 'Call Us'
-    },
-    {
       icon: HiLocationMarker,
       title: 'Address',
-      details: '123 Oxford Street, London, UK',
-      action: 'https://maps.google.com/?q=Oxford+Street+London+UK',
+      details: 'London, UK',
+      action: 'https://maps.google.com/?q=London+UK',
       actionText: 'Get Directions'
     },
     {
@@ -123,7 +116,7 @@ export default function ContactPage() {
 
       {/* Contact Info Cards */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {contactInfo.map((item, index) => (
             <motion.div
               key={index}
@@ -248,7 +241,7 @@ export default function ContactPage() {
           >
             <div className="h-full min-h-[400px] w-full bg-gray-200 relative">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d30451.798919034725!2d-2.2700!3d53.4808!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x487bb1bd4b4b3cb1%3A0xeadb2e0d2b4a!2sManchester%2C%20UK!5e0!3m2!1sen!2suk!4v1709650000001"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d158857.7281066494!2d-0.24168!3d51.5287718!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47d8a00baf21de75%3A0x52963a5addd52a99!2sLondon%2C%20UK!5e0!3m2!1sen!2suk!4v1709650000001"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}

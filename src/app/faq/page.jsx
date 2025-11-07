@@ -77,7 +77,7 @@ export default function FAQPage() {
         {
           id: "shipping-1",
           question: "How long does shipping take?",
-          answer: "Standard UK delivery takes 3-5 business days, while express delivery takes 1-2 business days. We process orders within 1-2 business days, so total time from order to delivery is typically 4-7 days for standard shipping."
+          answer: "Standard UK delivery takes 3-5 business days. International delivery takes 7-14 business days. We process orders within 1-2 business days, so total time from order to delivery is typically 4-7 days for UK orders."
         },
         {
           id: "shipping-2",
@@ -87,7 +87,7 @@ export default function FAQPage() {
         {
           id: "shipping-3",
           question: "How much does shipping cost?",
-          answer: "Standard UK delivery is £2.99, express delivery is £4.99, and orders over £25 qualify for free standard delivery. We also offer free shipping on all orders during promotional periods."
+          answer: "All UK delivery is FREE! International shipping starts at £9.99 depending on your location."
         },
         {
           id: "shipping-4",
@@ -108,7 +108,7 @@ export default function FAQPage() {
         {
           id: "account-2",
           question: "How do I contact customer service?",
-          answer: "We're here to help! Email us at hello@mysweetmagnets.co.uk, call us at 0800 123 4567, or use our live chat feature (available 9am-5pm GMT). We typically respond within 2 hours during business hours."
+          answer: "We're here to help! Email us at hello@mysweetmagnets.co.uk or use our live chat feature (available 9am-5pm GMT). We typically respond within 2 hours during business hours."
         },
         {
           id: "account-3",
@@ -219,14 +219,10 @@ export default function FAQPage() {
           <p className="text-lg mb-6 opacity-90">
             Can't find what you're looking for? Our friendly customer service team is here to help!
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">Email Us</h4>
               <p className="opacity-90">hello@mysweetmagnets.co.uk</p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">Call Us</h4>
-              <p className="opacity-90">0800 123 4567</p>
             </div>
             <div>
               <h4 className="font-semibold mb-2">Live Chat</h4>
