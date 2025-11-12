@@ -74,6 +74,12 @@ export default function CheckoutPage() {
         throw new Error('Missing Stripe publishable key')
       }
 
+      // Strip out large image data before sending to API
+      const sanitizedCart = cartItems.map(item => {
+        const { fileData, image, image_url, images, thumbnails, ...rest } = item
+        return rest
+      })
+
       const response = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: {
@@ -81,7 +87,7 @@ export default function CheckoutPage() {
           'x-publishable-key-mode': publishableKeyMode,
         },
         body: JSON.stringify({
-          cart: cartItems,
+          cart: sanitizedCart,
           currency: 'gbp',
           guest: isGuest ? {
             email: guestAddress?.email || null,

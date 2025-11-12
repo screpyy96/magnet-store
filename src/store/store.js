@@ -48,27 +48,20 @@ const getStorage = () => {
 const createDataTransform = () => ({
   in: (state, key) => {
     if (key === 'cart' && state.items) {
-      // Remove large image data from persisted state
+      // Remove ALL image data from persisted state to prevent quota errors
       const cleanedItems = state.items.map(item => {
-        const cleanItem = { ...item }
+        const { fileData, image, image_url, images, thumbnails, localImageData, ...cleanItem } = item
         
-        // Remove large base64 data but keep essential info
-        if (cleanItem.fileData && cleanItem.fileData.length > 1000) {
-          delete cleanItem.fileData
-        }
-        if (cleanItem.image && cleanItem.image.length > 1000) {
-          delete cleanItem.image
-        }
-        if (cleanItem.image_url && cleanItem.image_url.length > 1000) {
-          delete cleanItem.image_url
-        }
-        if (cleanItem.localImageData) {
-          // Keep only essential metadata, not the actual image data
-          cleanItem.localImageData = {
-            timestamp: cleanItem.localImageData.timestamp,
-            size: cleanItem.localImageData.size,
-            finish: cleanItem.localImageData.finish,
-            name: cleanItem.localImageData.name
+        // Parse custom_data and remove images from there too
+        if (cleanItem.custom_data) {
+          try {
+            const customData = JSON.parse(cleanItem.custom_data)
+            // Remove image arrays from custom_data
+            delete customData.images
+            delete customData.thumbnails
+            cleanItem.custom_data = JSON.stringify(customData)
+          } catch (e) {
+            // If parsing fails, keep original
           }
         }
         
@@ -122,9 +115,7 @@ const persistConfig = {
   whitelist: ['cart'], // Only cart is persisted
   transforms: [createDataTransform()],
   // Add throttle to prevent excessive writes
-  throttle: 1000,
-  // Temporarily disable persistence for debugging
-  enabled: false
+  throttle: 1000
 }
 
 const rootReducer = combineReducers({

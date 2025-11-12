@@ -16,7 +16,14 @@ export async function POST(request) {
         { status: 400 }
       )
     }
-    console.log('Received cart for payment intent:', JSON.stringify(cart, null, 2));
+    
+    // Strip out large image data from cart for logging and processing
+    const sanitizedCart = cart.map(item => {
+      const { fileData, image, image_url, images, thumbnails, ...rest } = item
+      return rest
+    })
+    
+    console.log('Received cart for payment intent (sanitized):', JSON.stringify(sanitizedCart, null, 2));
     
     if (!cart || !Array.isArray(cart) || cart.length === 0) {
       return NextResponse.json(
