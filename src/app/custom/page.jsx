@@ -371,10 +371,11 @@ export default function Custom() {
   };
   
   // Current display image
-  const currentImage = packageImages[currentImageIndex]?.thumbnail || null;
+  const currentImage = packageImages[currentImageIndex]?.fullImage || null;
   const imagesForDisplay = packageImages.map(img => ({
     id: img.id,
-    url: img.thumbnail,
+    url: img.fullImage,
+    thumbnail: img.thumbnail,
     name: img.name
   }));
 

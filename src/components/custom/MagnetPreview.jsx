@@ -62,7 +62,7 @@ export default function MagnetPreview({
                 <img
                   src={displayImage}
                   alt={`Magnet Preview ${currentImageIndex + 1}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain bg-white"
                   onLoad={handleImageLoad}
                   onError={handleImageError}
                 />
@@ -127,7 +127,7 @@ export default function MagnetPreview({
                 aria-label={`View image ${index + 1}`}
               >
                 <img 
-                  src={img.url} 
+                  src={img.thumbnail || img.url} 
                   alt={`Thumbnail ${index + 1}`}
                   className="w-full h-full object-cover"
                 />
