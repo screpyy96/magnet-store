@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSelector, useDispatch } from 'react-redux'
@@ -9,7 +9,6 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 import AddressSelector from '@/components/checkout/AddressSelector'
 import GuestAddressForm from '@/components/checkout/GuestAddressForm'
-import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector'
 import OrderSummary from '@/components/checkout/OrderSummary'
 import DeliveryInfo from '@/components/custom/DeliveryInfo'
 import StripePaymentForm from '@/components/checkout/StripePaymentForm'
@@ -17,17 +16,20 @@ import StripePaymentForm from '@/components/checkout/StripePaymentForm'
 export default function CheckoutPage() {
   const router = useRouter()
   const dispatch = useDispatch()
+  const { user, loading } = useAuth()
+  const isGuest = !user
+  const isDev = process.env.NODE_ENV !== 'production'
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
+  const stripePromise = useMemo(() => (publishableKey ? loadStripe(publishableKey) : null), [publishableKey])
+  const publishableKeyMode = publishableKey.startsWith('pk_live') ? 'live' : 'test'
 
   const cartItems = useSelector(selectCartItems)
   const [selectedAddress, setSelectedAddress] = useState(null)
   const [guestAddress, setGuestAddress] = useState(null)
-  const [stripePromise] = useState(() => loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY))
   const [clientSecret, setClientSecret] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [justPlacedOrder, setJustPlacedOrder] = useState(false)
-  const { user, loading, refreshSession, setRedirectAfterLogin } = useAuth()
-  const isGuest = !user
   
   // Calculate total from cart items
   const subtotal = cartItems.reduce((sum, item) => {
@@ -46,12 +48,18 @@ export default function CheckoutPage() {
   const [serverTotals, setServerTotals] = useState(null)
 
   useEffect(() => {
-    if (cartItems.length > 0) {
+    if (cartItems.length > 0 && publishableKey) {
       createPaymentIntent()
     }
     // Intenția de plată nu depinde de câmpurile adreselor; evităm recrearea la fiecare tastă
     // Guest details sunt trimise ulterior la crearea comenzii
-  }, [subtotal])
+  }, [subtotal, publishableKey])
+
+  useEffect(() => {
+    if (!publishableKey) {
+      setError('Payment service is temporarily unavailable. Please try again later.')
+    }
+  }, [publishableKey])
 
   // Clear previous error when guest address becomes valid
   useEffect(() => {
@@ -62,11 +70,15 @@ export default function CheckoutPage() {
 
   const createPaymentIntent = async () => {
     try {
+      if (!publishableKey) {
+        throw new Error('Missing Stripe publishable key')
+      }
+
       const response = await fetch('/api/stripe/create-payment-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-publishable-key-mode': (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '').startsWith('pk_live') ? 'live' : 'test',
+          'x-publishable-key-mode': publishableKeyMode,
         },
         body: JSON.stringify({
           cart: cartItems,
@@ -91,16 +103,20 @@ export default function CheckoutPage() {
       if (data.totals) {
         setServerTotals(data.totals)
       }
-    } catch (error) {
-      console.error('Error creating payment intent:', error)
-      setError('Failed to initialize payment. Please try again.')
+    } catch (err) {
+      if (isDev) {
+        console.error('Error creating payment intent:', err)
+      }
+      setError(isDev ? err.message || 'Failed to initialize payment.' : 'Payment service is temporarily unavailable. Please try again later.')
     }
   }
   
 
   useEffect(() => {
     if (!loading && cartItems.length === 0 && !justPlacedOrder) {
-      console.log('Cart is empty, redirecting to custom page')
+      if (isDev) {
+        console.log('Cart is empty, redirecting to custom page')
+      }
       router.push('/custom')
       return
     }
@@ -156,7 +172,9 @@ export default function CheckoutPage() {
         throw new Error(data.error || 'Failed to create order')
       }
 
-      console.log('Order created successfully:', data)
+      if (isDev) {
+        console.log('Order created successfully:', data)
+      }
 
       // Set flag to prevent redirect
       setJustPlacedOrder(true)
@@ -165,12 +183,16 @@ export default function CheckoutPage() {
       dispatch(clearCart())
       
       // Then redirect to confirmation page
-      console.log('Redirecting to confirmation page with order ID:', data.orderId)
+      if (isDev) {
+        console.log('Redirecting to confirmation page with order ID:', data.orderId)
+      }
       router.push(`/orders/confirmation?order_id=${data.orderId}&from_confirmation=true`)
       
     } catch (err) {
-      console.error('Error creating order:', err)
-      setError(err.message)
+      if (isDev) {
+        console.error('Error creating order:', err)
+      }
+      setError(isDev ? err.message : 'We could not place your order. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -182,12 +204,16 @@ export default function CheckoutPage() {
         {error ? (
           <div className="max-w-md w-full bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">
             <h3 className="font-semibold mb-1">Payment initialization failed</h3>
-            <p className="text-sm mb-3">{error}</p>
-            <ul className="list-disc list-inside text-sm mb-4">
-              <li>Verifică că ai setat corect cheile Stripe în environment (.env): <code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> și <code>STRIPE_SECRET_KEY</code>.</li>
-              <li>Asigură-te că ai produse în coș.</li>
-              <li>Reîncearcă mai târziu sau reîmprospătează pagina.</li>
-            </ul>
+            <p className="text-sm mb-3">
+              {isDev ? error : "We couldn't initialize the payment. Please refresh and try again."}
+            </p>
+            {isDev && (
+              <ul className="list-disc list-inside text-sm mb-4">
+                <li>Verifică că ai setat corect cheile Stripe în environment (.env): <code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> și <code>STRIPE_SECRET_KEY</code>.</li>
+                <li>Asigură-te că ai produse în coș.</li>
+                <li>Reîncearcă mai târziu sau reîmprospătează pagina.</li>
+              </ul>
+            )}
             <button onClick={() => { setError(null); createPaymentIntent(); }} className="px-4 py-2 bg-indigo-600 text-white rounded-md">Reîncearcă</button>
           </div>
         ) : (
@@ -215,24 +241,26 @@ export default function CheckoutPage() {
             />
           )}
           
-          <Elements key={clientSecret} stripe={stripePromise} options={{ clientSecret }}>
-            <StripePaymentForm
-              onPlaceOrder={handlePlaceOrder}
-              isLoading={isLoading}
-              error={error}
-              canPay={canPay}
-              billingDefaults={isGuest ? guestAddress : null}
-              prepareOrderPayload={async () => ({
-                items: cartItems,
-                totals: serverTotals,
-                subtotal,
-                shippingAddressId: !isGuest ? selectedAddress?.id : null,
-                shippingDetails: isGuest ? guestAddress : null,
-                userId: user?.id || null,
-                email: isGuest ? guestAddress?.email : user?.email || null,
-              })}
-            />
-          </Elements>
+          {stripePromise && (
+            <Elements key={clientSecret} stripe={stripePromise} options={{ clientSecret }}>
+              <StripePaymentForm
+                onPlaceOrder={handlePlaceOrder}
+                isLoading={isLoading}
+                error={error}
+                canPay={canPay}
+                billingDefaults={isGuest ? guestAddress : null}
+                prepareOrderPayload={async () => ({
+                  items: cartItems,
+                  totals: serverTotals,
+                  subtotal,
+                  shippingAddressId: !isGuest ? selectedAddress?.id : null,
+                  shippingDetails: isGuest ? guestAddress : null,
+                  userId: user?.id || null,
+                  email: isGuest ? guestAddress?.email : user?.email || null,
+                })}
+              />
+            </Elements>
+          )}
           
           <DeliveryInfo />
         </div>
