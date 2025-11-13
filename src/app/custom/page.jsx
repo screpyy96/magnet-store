@@ -158,6 +158,24 @@ export default function Custom() {
     
     if (files.length === 0) return;
     
+    // Validate file sizes (max 10MB per file)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const invalidFiles = files.filter(f => f.size > MAX_FILE_SIZE);
+    
+    if (invalidFiles.length > 0) {
+      showToast(`Some files are too large (max 10MB). Please use smaller images.`, 'error');
+      return;
+    }
+    
+    // Validate file types
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const invalidTypes = files.filter(f => !validTypes.includes(f.type));
+    
+    if (invalidTypes.length > 0) {
+      showToast('Please upload only JPG, PNG, or WebP images', 'error');
+      return;
+    }
+    
     // Check if we can add more images
     const remainingSlots = selectedPackage.maxFiles - packageImages.length;
     if (remainingSlots <= 0) {
@@ -254,25 +272,55 @@ export default function Custom() {
         const img = packageImages[i];
         setUploadProgress(((i + 1) / packageImages.length) * 100);
         
-        // Convert base64 to blob
-        const response = await fetch(img.fullImage);
-        const blob = await response.blob();
-        
-        // Upload to server
-        const formData = new FormData();
-        formData.append('file', blob, `magnet-${i + 1}.jpg`);
-        
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload image');
+        try {
+          // Convert base64 to blob
+          const response = await fetch(img.fullImage);
+          const blob = await response.blob();
+          
+          // Check blob size (should be under 5MB after compression)
+          if (blob.size > 5 * 1024 * 1024) {
+            console.warn(`Image ${i + 1} is large (${(blob.size / 1024 / 1024).toFixed(2)}MB), compressing...`);
+            // If still too large, compress more aggressively
+            const compressedBlob = await compressImage(blob, 0.7);
+            
+            // Upload compressed version
+            const formData = new FormData();
+            formData.append('file', compressedBlob, `magnet-${i + 1}.jpg`);
+            
+            const uploadResponse = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData
+            });
+            
+            if (!uploadResponse.ok) {
+              const errorData = await uploadResponse.json().catch(() => ({}));
+              throw new Error(errorData.error || `Failed to upload image ${i + 1}`);
+            }
+            
+            const { url } = await uploadResponse.json();
+            uploadedImageUrls.push(url);
+          } else {
+            // Upload original
+            const formData = new FormData();
+            formData.append('file', blob, `magnet-${i + 1}.jpg`);
+            
+            const uploadResponse = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData
+            });
+            
+            if (!uploadResponse.ok) {
+              const errorData = await uploadResponse.json().catch(() => ({}));
+              throw new Error(errorData.error || `Failed to upload image ${i + 1}`);
+            }
+            
+            const { url } = await uploadResponse.json();
+            uploadedImageUrls.push(url);
+          }
+        } catch (uploadError) {
+          console.error(`Error uploading image ${i + 1}:`, uploadError);
+          throw new Error(`Failed to upload image ${i + 1}: ${uploadError.message}`);
         }
-        
-        const { url } = await uploadResponse.json();
-        uploadedImageUrls.push(url);
       }
       
       // Clear any existing package from cart
@@ -326,6 +374,36 @@ export default function Custom() {
   };
   
   // Helper functions
+  const compressImage = async (blob, quality = 0.8) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Keep original dimensions but compress quality
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob(
+          (compressedBlob) => {
+            if (compressedBlob) {
+              resolve(compressedBlob);
+            } else {
+              reject(new Error('Failed to compress image'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error('Failed to load image for compression'));
+      img.src = URL.createObjectURL(blob);
+    });
+  };
+  
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();

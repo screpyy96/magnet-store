@@ -24,10 +24,30 @@ export async function POST(request) {
         )
       }
       
+      // Check file size (max 10MB)
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      if (file.size > MAX_SIZE) {
+        return NextResponse.json(
+          { error: `File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is 10MB.` }, 
+          { status: 413 }
+        )
+      }
+      
       // Convert file to buffer
       const arrayBuffer = await file.arrayBuffer()
       imageBuffer = Buffer.from(arrayBuffer)
+      
+      // Validate buffer size
+      if (imageBuffer.length === 0) {
+        return NextResponse.json(
+          { error: 'Empty file received' }, 
+          { status: 400 }
+        )
+      }
+      
       fileName = `magnet_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`
+      
+      console.log(`Processing file: ${file.name}, size: ${(file.size / 1024).toFixed(2)}KB`)
       
     } else {
       // Handle JSON base64 upload (legacy method)
