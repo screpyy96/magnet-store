@@ -12,7 +12,13 @@ const nextConfig = {
       },
     ],
   },
-  serverExternalPackages: ['@supabase/supabase-js']
+  serverExternalPackages: ['@supabase/supabase-js'],
+  // Increase body size limit for image uploads (default is 4MB)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb'
+    }
+  }
 };
 
 export default nextConfig;

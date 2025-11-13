@@ -96,6 +96,7 @@ export default function Custom() {
   const [currentEditingFile, setCurrentEditingFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState(''); // For mobile debugging
  
   // On mount (client), ensure we reflect any URL package (supports ?package= and legacy ?qty=)
   useEffect(() => {
@@ -273,24 +274,48 @@ export default function Custom() {
         setUploadProgress(((i + 1) / packageImages.length) * 100);
         
         try {
+          setUploadStatus(`Processing image ${i + 1}/${packageImages.length}...`);
           console.log(`Processing image ${i + 1}/${packageImages.length}...`);
           
           // Convert base64 to blob
           const response = await fetch(img.fullImage);
           const blob = await response.blob();
           
-          console.log(`Image ${i + 1} blob size: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+          const blobSizeMB = (blob.size / 1024 / 1024).toFixed(2);
+          setUploadStatus(`Image ${i + 1}: ${blobSizeMB}MB`);
+          console.log(`Image ${i + 1} blob size: ${blobSizeMB}MB`);
           
           let finalBlob = blob;
           
-          // Check blob size (should be under 5MB after compression)
-          if (blob.size > 5 * 1024 * 1024) {
-            console.log(`Image ${i + 1} is large, compressing...`);
+          // Always compress to ensure size is under 3MB (safe for 4MB limit with overhead)
+          const TARGET_SIZE = 3 * 1024 * 1024; // 3MB target
+          
+          if (blob.size > TARGET_SIZE) {
+            setUploadStatus(`Compressing image ${i + 1}...`);
+            console.log(`Image ${i + 1} is ${blobSizeMB}MB, compressing...`);
+            
             try {
-              finalBlob = await compressImage(blob, 0.7);
-              console.log(`Compressed to ${(finalBlob.size / 1024 / 1024).toFixed(2)}MB`);
+              // Try progressive compression
+              let quality = 0.8;
+              finalBlob = await compressImage(blob, quality);
+              
+              // If still too large, compress more
+              while (finalBlob.size > TARGET_SIZE && quality > 0.3) {
+                quality -= 0.1;
+                console.log(`Still too large, trying quality ${quality.toFixed(1)}...`);
+                finalBlob = await compressImage(blob, quality);
+              }
+              
+              const compressedSizeMB = (finalBlob.size / 1024 / 1024).toFixed(2);
+              setUploadStatus(`Compressed to ${compressedSizeMB}MB (q:${quality.toFixed(1)})`);
+              console.log(`Compressed to ${compressedSizeMB}MB with quality ${quality.toFixed(1)}`);
+              
+              if (finalBlob.size > TARGET_SIZE) {
+                console.warn(`Could not compress below ${TARGET_SIZE / 1024 / 1024}MB, final size: ${compressedSizeMB}MB`);
+              }
             } catch (compressError) {
-              console.error('Compression failed, using original:', compressError);
+              console.error('Compression failed:', compressError);
+              setUploadStatus(`Compression failed, trying original`);
               finalBlob = blob;
             }
           }
@@ -299,6 +324,7 @@ export default function Custom() {
           const formData = new FormData();
           formData.append('file', finalBlob, `magnet-${i + 1}.jpg`);
           
+          setUploadStatus(`Uploading image ${i + 1}...`);
           console.log(`Uploading image ${i + 1}...`);
           
           const uploadResponse = await Promise.race([
@@ -316,6 +342,7 @@ export default function Custom() {
           if (!uploadResponse.ok) {
             const errorText = await uploadResponse.text();
             console.error(`Upload failed with status ${uploadResponse.status}:`, errorText);
+            setUploadStatus(`Upload failed: ${uploadResponse.status}`);
             
             let errorData;
             try {
@@ -329,6 +356,7 @@ export default function Custom() {
           
           const result = await uploadResponse.json();
           console.log(`Image ${i + 1} uploaded successfully:`, result.url);
+          setUploadStatus(`Image ${i + 1} uploaded ✓`);
           
           if (!result.url) {
             throw new Error('No URL returned from upload');
@@ -338,6 +366,7 @@ export default function Custom() {
           
         } catch (uploadError) {
           console.error(`Error uploading image ${i + 1}:`, uploadError);
+          setUploadStatus(`Error: ${uploadError.message}`);
           throw new Error(`Image ${i + 1}: ${uploadError.message}`);
         }
       }
@@ -388,6 +417,7 @@ export default function Custom() {
       
       // Show specific error message
       const errorMessage = error.message || 'Failed to upload images';
+      setUploadStatus(`❌ ${errorMessage}`);
       showToast(errorMessage, 'error');
       
       // Log for debugging
@@ -400,22 +430,42 @@ export default function Custom() {
     } finally {
       setIsLoading(false);
       setUploadProgress(0);
+      // Keep status visible for 3 seconds after completion
+      setTimeout(() => setUploadStatus(''), 3000);
     }
   };
   
   // Helper functions
-  const compressImage = async (blob, quality = 0.8) => {
+  const compressImage = async (blob, quality = 0.8, maxDimension = 2000) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // Keep original dimensions but compress quality
-        canvas.width = img.width;
-        canvas.height = img.height;
+        // Calculate new dimensions while maintaining aspect ratio
+        let width = img.width;
+        let height = img.height;
         
-        ctx.drawImage(img, 0, 0);
+        // If image is larger than maxDimension, scale it down
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = (height / width) * maxDimension;
+            width = maxDimension;
+          } else {
+            width = (width / height) * maxDimension;
+            height = maxDimension;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Use better image smoothing
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        ctx.drawImage(img, 0, 0, width, height);
         
         canvas.toBlob(
           (compressedBlob) => {
@@ -590,6 +640,14 @@ export default function Custom() {
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
+                  {/* Upload Status - Visible on mobile for debugging */}
+                  {uploadStatus && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs font-mono text-blue-900 break-words">
+                        {uploadStatus}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
               

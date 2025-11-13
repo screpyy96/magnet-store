@@ -73,8 +73,9 @@ export default function ImageEditor({ file, onSave, onCancel, currentIndex = 0, 
       
       ctx.restore()
       
-      // Use PNG for lossless quality, or JPEG at maximum quality
-      return canvas.toDataURL('image/png');
+      // Use JPEG with high quality (much smaller than PNG)
+      // Quality 0.92 gives excellent print quality at ~1-2MB per image
+      return canvas.toDataURL('image/jpeg', 0.92);
     } catch (e) {
       return null
     }
@@ -93,7 +94,43 @@ export default function ImageEditor({ file, onSave, onCancel, currentIndex = 0, 
       
       // Convert base64 to Blob
       const fetchRes = await fetch(croppedImageBase64)
-      const blob = await fetchRes.blob()
+      let blob = await fetchRes.blob()
+      
+      // Check size and compress if needed (target: under 2MB for safety)
+      const TARGET_SIZE = 2 * 1024 * 1024; // 2MB
+      const originalSize = (blob.size / 1024 / 1024).toFixed(2);
+      
+      if (blob.size > TARGET_SIZE) {
+        console.log(`Image is ${originalSize}MB, compressing...`);
+        
+        // Re-compress with lower quality
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = croppedImageBase64;
+        });
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        // Try progressively lower quality until under target
+        let quality = 0.85;
+        while (quality > 0.5) {
+          blob = await new Promise((resolve) => {
+            canvas.toBlob(resolve, 'image/jpeg', quality);
+          });
+          
+          if (blob.size <= TARGET_SIZE) break;
+          quality -= 0.05;
+        }
+        
+        const finalSize = (blob.size / 1024 / 1024).toFixed(2);
+        console.log(`Compressed from ${originalSize}MB to ${finalSize}MB (quality: ${quality.toFixed(2)})`);
+      }
       
       // Call the save function from parent
       await onSave(blob)
