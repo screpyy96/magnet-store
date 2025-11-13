@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import Cropper from "react-easy-crop"
 
-export default function ImageEditor({ file, onSave, onCancel }) {
+export default function ImageEditor({ file, onSave, onCancel, currentIndex = 0, totalFiles = 1 }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
@@ -11,6 +11,9 @@ export default function ImageEditor({ file, onSave, onCancel }) {
   const [imageSrc, setImageSrc] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  
+  const isMultipleFiles = totalFiles > 1
+  const progressText = isMultipleFiles ? `Image ${currentIndex + 1} of ${totalFiles}` : null
 
   // Load image when file changes
   useEffect(() => {
@@ -113,12 +116,18 @@ export default function ImageEditor({ file, onSave, onCancel }) {
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-screen overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <h3 className="text-lg font-semibold text-gray-900">Position Your Image</h3>
+            {progressText && (
+              <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm font-medium rounded-full">
+                {progressText}
+              </span>
+            )}
           </div>
           <button
             onClick={onCancel}
             className="text-gray-400 hover:text-gray-600"
+            title={isMultipleFiles ? "Cancel all remaining images" : "Cancel"}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -213,7 +222,7 @@ export default function ImageEditor({ file, onSave, onCancel }) {
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-pink-500 to-orange-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-pink-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
-                {loading ? 'Saving...' : 'Save'}
+                {loading ? 'Saving...' : (isMultipleFiles && currentIndex < totalFiles - 1 ? 'Save & Next' : 'Save')}
               </button>
               <button
                 onClick={onCancel}

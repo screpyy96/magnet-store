@@ -143,6 +143,10 @@ export default function Custom() {
     setCurrentImageIndex(0);
   }, [packageImages]);
   
+  // Queue for multiple file uploads
+  const [fileQueue, setFileQueue] = useState([]);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  
   // Handle file selection
   const handleFileChange = (e) => {
     if (!selectedPackage) {
@@ -163,47 +167,16 @@ export default function Custom() {
     
     if (files.length > remainingSlots) {
       showToast(`You can only add ${remainingSlots} more images to this package`, 'warning');
-      return;
+      files.splice(remainingSlots); // Trim to remaining slots
     }
     
-    // Process single or multiple files
-    if (files.length === 1) {
-      setCurrentEditingFile(files[0]);
-    } else {
-      processMultipleFiles(files.slice(0, remainingSlots));
-    }
+    // Start sequential crop flow for all files
+    setFileQueue(files);
+    setCurrentFileIndex(0);
+    setCurrentEditingFile(files[0]);
   };
   
-  // Process multiple files without editor
-  const processMultipleFiles = async (files) => {
-    setIsLoading(true);
-    const newImages = [];
-    
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setUploadProgress(((i + 1) / files.length) * 100);
-        
-        const base64 = await fileToBase64(file);
-        const thumbnail = await createThumbnail(file);
-        
-        newImages.push({
-          id: `img-${Date.now()}-${i}`,
-          fullImage: base64,
-          thumbnail: thumbnail,
-          name: file.name
-        });
-      }
-      
-      setPackageImages(prev => [...prev, ...newImages]);
-      showToast(`Added ${files.length} images to package`, 'success');
-    } catch (error) {
-      showToast('Error processing images: ' + error.message, 'error');
-    } finally {
-      setIsLoading(false);
-      setUploadProgress(0);
-    }
-  };
+  // No longer needed - all files go through crop editor sequentially
   
   // Handle cropped image from editor
   const handleCroppedImage = async (blob) => {
@@ -221,14 +194,42 @@ export default function Custom() {
       };
       
       setPackageImages(prev => [...prev, newImage]);
-      setCurrentEditingFile(null);
-      showToast('Image added to package!', 'success');
+      
+      // Check if there are more files in the queue
+      const nextIndex = currentFileIndex + 1;
+      if (fileQueue.length > 0 && nextIndex < fileQueue.length) {
+        // Move to next file in queue
+        setCurrentFileIndex(nextIndex);
+        setCurrentEditingFile(fileQueue[nextIndex]);
+        showToast(`Image ${nextIndex} of ${fileQueue.length} added! Crop next image...`, 'success');
+      } else {
+        // All files processed
+        setCurrentEditingFile(null);
+        setFileQueue([]);
+        setCurrentFileIndex(0);
+        showToast(fileQueue.length > 1 ? `All ${fileQueue.length} images added to package!` : 'Image added to package!', 'success');
+      }
       
     } catch (error) {
       showToast('Error processing image: ' + error.message, 'error');
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Handle cancel during crop
+  const handleCancelCrop = () => {
+    if (fileQueue.length > 1) {
+      const remaining = fileQueue.length - currentFileIndex;
+      const confirmCancel = window.confirm(
+        `You have ${remaining} image${remaining > 1 ? 's' : ''} remaining. Cancel all?`
+      );
+      if (!confirmCancel) return;
+    }
+    
+    setCurrentEditingFile(null);
+    setFileQueue([]);
+    setCurrentFileIndex(0);
   };
   
   // Add package to cart
@@ -291,12 +292,14 @@ export default function Custom() {
         price: packagePrice,
         totalPrice: packagePrice,
         quantity: 1,
+        images: uploadedImageUrls, // Add images array for cart display
         custom_data: JSON.stringify({
           type: 'custom_magnet_package',
           packageId: selectedPackage.id,
           packageName: selectedPackage.name,
           size: selectedSize,
           finish: selectedFinish,
+          thumbnails: uploadedImageUrls, // For backward compatibility
           imageUrls: uploadedImageUrls, // Only URLs, no base64
           imageCount: uploadedImageUrls.length
         })
@@ -558,7 +561,9 @@ export default function Custom() {
         <ImageEditor
           file={currentEditingFile}
           onSave={handleCroppedImage}
-          onCancel={() => setCurrentEditingFile(null)}
+          onCancel={handleCancelCrop}
+          currentIndex={currentFileIndex}
+          totalFiles={fileQueue.length}
         />
       )}
     </div>

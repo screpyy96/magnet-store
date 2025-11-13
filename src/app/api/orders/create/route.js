@@ -176,18 +176,21 @@ export async function POST(request) {
         
         if (customData.type === 'custom_magnet_package') {
           // Handle package - extract all images
-          const images = customData.images || [];
-          const thumbnails = customData.thumbnails || item.images || [];
+          // Priority: imageUrls (new format) > images (legacy) > thumbnails > item.images
+          const imageUrls = customData.imageUrls || customData.images || customData.thumbnails || item.images || [];
           const packageName = customData.packageName || item.name || 'Custom Magnet Package';
           
           console.log('Processing package:', {
             packageId: customData.packageId,
-            imageCount: images.length || thumbnails.length,
-            packageName: packageName
+            imageCount: imageUrls.length,
+            packageName: packageName,
+            hasImageUrls: !!customData.imageUrls,
+            hasImages: !!customData.images,
+            hasThumbnails: !!customData.thumbnails,
+            hasItemImages: !!item.images
           });
           
-          // Use full images if available, otherwise use thumbnails
-          const imagesToProcess = images.length > 0 ? images : thumbnails;
+          const imagesToProcess = imageUrls;
           
           // Create one order item per image in the package
           const pkgPrice = (customData.packageId && PACKAGE_PRICES[customData.packageId]) ? PACKAGE_PRICES[customData.packageId] : (item.price || 0)

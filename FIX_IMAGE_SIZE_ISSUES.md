@@ -32,10 +32,18 @@ custom_data: JSON.stringify({
 })
 
 // Acum: salvăm doar URL-uri
-custom_data: JSON.stringify({
-  imageUrls: uploadedImageUrls, // ✅ doar URL-uri
-  imageCount: uploadedImageUrls.length
-})
+const packageItem = {
+  id: `package-${selectedPackage.id}-${Date.now()}`,
+  name: `${selectedPackage.name}`,
+  price: packagePrice,
+  images: uploadedImageUrls, // ✅ URL-uri pentru afișare în cart
+  custom_data: JSON.stringify({
+    type: 'custom_magnet_package',
+    thumbnails: uploadedImageUrls, // Pentru backward compatibility
+    imageUrls: uploadedImageUrls, // URL-uri server
+    imageCount: uploadedImageUrls.length
+  })
+}
 ```
 
 ### 2. Actualizat API-ul de upload
@@ -80,6 +88,20 @@ out: (state, key) => {
 4. **Scalabilitate**: Funcționează cu orice număr de magneți
 5. **Backup**: Imaginile sunt pe server, nu se pierd la clear cache
 
+## Afișare Imagini în Cart
+
+**Fișier**: `src/components/Cart.jsx`
+
+Cart-ul afișează imaginile din:
+1. `item.images` array (URL-uri de pe server)
+2. `customData.thumbnails` din `custom_data` (pentru backward compatibility)
+3. Fallback la placeholder dacă nu există imagini
+
+```javascript
+// Cart caută imagini în această ordine:
+const thumbnails = customData.thumbnails || item.images || [];
+```
+
 ## Testare
 
 Pentru a testa fix-ul:
@@ -91,6 +113,7 @@ Pentru a testa fix-ul:
 5. Verifică că:
    - Progress bar-ul apare în timpul upload-ului
    - Nu apar erori în consolă
+   - Imaginile apar în cart (click pe icon-ul de cart)
    - Checkout-ul se încarcă corect
    - Payment-ul funcționează fără eroare 413
 
