@@ -125,21 +125,8 @@ export default function Custom() {
     }
   }, [selectedPackage]);
   
-  // Load saved images from localStorage on mount
-  useEffect(() => {
-    if (!selectedPackage) return;
-    const savedImages = safeLocalStorage.getJSON(`package_${selectedPackage.id}_images`) || [];
-    if (savedImages.length > 0) {
-      setPackageImages(savedImages);
-      showToast(`Restored ${savedImages.length} images from previous session`, 'info');
-    }
-  }, [selectedPackage?.id]);
-  
-  // Save images to localStorage when they change
-  useEffect(() => {
-    if (!selectedPackage || packageImages.length === 0) return;
-    safeLocalStorage.setJSON(`package_${selectedPackage.id}_images`, packageImages);
-  }, [packageImages, selectedPackage?.id]);
+  // Note: We no longer save images to localStorage to avoid quota issues
+  // Images are kept in memory and uploaded to server when adding to cart
   
   // Handle package selection
   const handlePackageSelect = useCallback((pkg) => {
@@ -245,7 +232,7 @@ export default function Custom() {
   };
   
   // Add package to cart
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!selectedPackage) {
       showToast('Please select a package first', 'warning');
       return;
@@ -256,51 +243,83 @@ export default function Custom() {
       return;
     }
     
-    // Clear any existing package from cart
-    const cartItems = selectCartItems(store.getState());
-    cartItems.forEach((item, index) => {
-      if (item.custom_data && JSON.parse(item.custom_data).packageId === selectedPackage.id) {
-        dispatch(removeItem(index));
+    setIsLoading(true);
+    
+    try {
+      // Upload images to server and get URLs
+      const uploadedImageUrls = [];
+      
+      for (let i = 0; i < packageImages.length; i++) {
+        const img = packageImages[i];
+        setUploadProgress(((i + 1) / packageImages.length) * 100);
+        
+        // Convert base64 to blob
+        const response = await fetch(img.fullImage);
+        const blob = await response.blob();
+        
+        // Upload to server
+        const formData = new FormData();
+        formData.append('file', blob, `magnet-${i + 1}.jpg`);
+        
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image');
+        }
+        
+        const { url } = await uploadResponse.json();
+        uploadedImageUrls.push(url);
       }
-    });
-    
-    // Add complete package to cart
-    const packagePrice = parseFloat(selectedPackage.price) || 0;
-    console.log('Package price calculation:', {
-      selectedPackagePrice: selectedPackage.price,
-      packagePrice: packagePrice,
-      selectedPackage: selectedPackage
-    });
-    
-    const packageItem = {
-      id: `package-${selectedPackage.id}-${Date.now()}`,
-      name: `${selectedPackage.name} (${selectedSize}cm, ${selectedFinish})`,
-      price: packagePrice,
-      totalPrice: packagePrice,
-      quantity: 1,
-      images: packageImages.map(img => img.thumbnail),
-      custom_data: JSON.stringify({
-        type: 'custom_magnet_package',
-        packageId: selectedPackage.id,
-        packageName: selectedPackage.name,
-        size: selectedSize,
-        finish: selectedFinish,
-        images: packageImages.map(img => img.fullImage),
-        thumbnails: packageImages.map(img => img.thumbnail)
-      })
-    };
-    
-    console.log('About to dispatch packageItem:', packageItem);
-    console.log('PackageItem price type:', typeof packageItem.price);
-    console.log('PackageItem totalPrice type:', typeof packageItem.totalPrice);
+      
+      // Clear any existing package from cart
+      const cartItems = selectCartItems(store.getState());
+      cartItems.forEach((item, index) => {
+        if (item.custom_data && JSON.parse(item.custom_data).packageId === selectedPackage.id) {
+          dispatch(removeItem(index));
+        }
+      });
+      
+      // Add complete package to cart with image URLs only (no base64)
+      const packagePrice = parseFloat(selectedPackage.price) || 0;
+      
+      const packageItem = {
+        id: `package-${selectedPackage.id}-${Date.now()}`,
+        name: `${selectedPackage.name} (${selectedSize}cm, ${selectedFinish})`,
+        price: packagePrice,
+        totalPrice: packagePrice,
+        quantity: 1,
+        custom_data: JSON.stringify({
+          type: 'custom_magnet_package',
+          packageId: selectedPackage.id,
+          packageName: selectedPackage.name,
+          size: selectedSize,
+          finish: selectedFinish,
+          imageUrls: uploadedImageUrls, // Only URLs, no base64
+          imageCount: uploadedImageUrls.length
+        })
+      };
 
-    dispatch(addItem(packageItem));
-    
-    // Clear local storage for this package
-    safeLocalStorage.removeItem(`package_${selectedPackage.id}_images`);
-    
-    // Navigate to checkout
-    router.push('/checkout');
+      dispatch(addItem(packageItem));
+      
+      showToast('Package added to cart!', 'success');
+      
+      // Clear local images from state
+      setPackageImages([]);
+      setCurrentImageIndex(0);
+      
+      // Navigate to checkout
+      router.push('/checkout');
+      
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      showToast('Failed to upload images. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
+      setUploadProgress(0);
+    }
   };
   
   // Helper functions

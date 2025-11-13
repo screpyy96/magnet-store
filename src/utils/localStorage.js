@@ -16,6 +16,15 @@ const clearOldData = () => {
   if (typeof window === 'undefined') return false;
   
   try {
+    // Remove all package image data (legacy - should not be in localStorage)
+    const allKeys = Object.keys(localStorage);
+    for (const key of allKeys) {
+      if (key.startsWith('package_') && key.endsWith('_images')) {
+        console.log(`Removing legacy package images from localStorage: ${key}`);
+        localStorage.removeItem(key);
+      }
+    }
+    
     // Clear old custom magnet images (keep only last 20)
     const customImages = JSON.parse(localStorage.getItem('customMagnetImages') || '[]');
     if (customImages.length > 20) {
@@ -149,6 +158,12 @@ export const safeLocalStorage = {
   // Set JSON safely with size optimization for images
   setJSON: (key, value) => {
     try {
+      // Block storing package images entirely - they should be uploaded to server
+      if (key.startsWith('package_') && key.endsWith('_images')) {
+        console.warn(`Blocked attempt to store ${key} in localStorage. Images should be uploaded to server instead.`);
+        return false;
+      }
+      
       let dataToStore = value;
       
       // Special handling for custom magnet images
@@ -246,6 +261,14 @@ export const cleanupImageStorage = () => {
   }
   return false;
 };
+
+// Auto-cleanup on module load (runs once when app starts)
+if (typeof window !== 'undefined') {
+  // Run cleanup after a short delay to not block initial render
+  setTimeout(() => {
+    clearOldData();
+  }, 1000);
+}
 
 // Legacy exports for backwards compatibility
 export const getItem = safeLocalStorage.getItem;

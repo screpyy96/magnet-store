@@ -56,9 +56,10 @@ const createDataTransform = () => ({
         if (cleanItem.custom_data) {
           try {
             const customData = JSON.parse(cleanItem.custom_data)
-            // Remove image arrays from custom_data
+            // Remove image arrays and base64 data from custom_data
             delete customData.images
             delete customData.thumbnails
+            // Keep only imageUrls and imageCount
             cleanItem.custom_data = JSON.stringify(customData)
           } catch (e) {
             // If parsing fails, keep original
@@ -76,34 +77,7 @@ const createDataTransform = () => ({
     return state
   },
   out: (state, key) => {
-    if (key === 'cart' && state.items) {
-      // When reading from storage, try to restore image data from localStorage
-      const restoredItems = state.items.map(item => {
-        if (item.localImageData && item.localImageData.timestamp) {
-          try {
-            const customImages = JSON.parse(localStorage.getItem('customMagnetImages') || '[]')
-            const matchingImage = customImages.find(img => img.timestamp === item.localImageData.timestamp)
-            if (matchingImage) {
-              return {
-                ...item,
-                image: matchingImage.thumbnail,
-                image_url: matchingImage.thumbnail,
-                fileData: matchingImage.thumbnail,
-                localImageData: matchingImage
-              }
-            }
-          } catch (e) {
-            // If restoration fails, keep the item but without image data
-          }
-        }
-        return item
-      })
-      
-      return {
-        ...state,
-        items: restoredItems
-      }
-    }
+    // No need to restore images - they're already URLs on the server
     return state
   }
 })

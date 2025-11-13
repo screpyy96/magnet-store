@@ -5,39 +5,73 @@ export const runtime = 'nodejs'
 
 export async function POST(request) {
   try {
-    // Logging mai bun
     console.log('Upload endpoint called')
     
-    // Obținem datele din request
-    let requestData
-    try {
-      requestData = await request.json()
-    } catch (error) {
-      console.error('Failed to parse request JSON:', error)
-      return NextResponse.json(
-        { error: 'Invalid request data' }, 
-        { status: 400 }
-      )
+    // Check if request is FormData or JSON
+    const contentType = request.headers.get('content-type') || ''
+    let imageBuffer
+    let fileName
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData upload (new method)
+      const formData = await request.formData()
+      const file = formData.get('file')
+      
+      if (!file || !(file instanceof Blob)) {
+        return NextResponse.json(
+          { error: 'Missing or invalid file' }, 
+          { status: 400 }
+        )
+      }
+      
+      // Convert file to buffer
+      const arrayBuffer = await file.arrayBuffer()
+      imageBuffer = Buffer.from(arrayBuffer)
+      fileName = `magnet_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`
+      
+    } else {
+      // Handle JSON base64 upload (legacy method)
+      let requestData
+      try {
+        requestData = await request.json()
+      } catch (error) {
+        console.error('Failed to parse request JSON:', error)
+        return NextResponse.json(
+          { error: 'Invalid request data' }, 
+          { status: 400 }
+        )
+      }
+      
+      const { base64Data, userId } = requestData
+      
+      console.log('Received request with userId:', userId)
+      console.log('base64Data exists:', !!base64Data)
+      
+      if (!base64Data || typeof base64Data !== 'string') {
+        return NextResponse.json(
+          { error: 'Missing or invalid image data' }, 
+          { status: 400 }
+        )
+      }
+      
+      // Process base64 data
+      const parts = base64Data.split(',')
+      const base64Content = parts[1] || parts[0]
+      
+      if (!base64Content) {
+        return NextResponse.json(
+          { error: 'Invalid base64 content' }, 
+          { status: 400 }
+        )
+      }
+      
+      imageBuffer = Buffer.from(base64Content, 'base64')
+      fileName = `magnet_${Date.now()}.jpg`
     }
     
-    const { base64Data, userId } = requestData
-    
-    // Log pentru debugging
-    console.log('Received request with userId:', userId)
-    console.log('base64Data exists:', !!base64Data)
-    console.log('base64Data type:', typeof base64Data)
-    
-    // Validarea datelor
-    if (!base64Data) {
+    if (!imageBuffer || imageBuffer.length === 0) {
       return NextResponse.json(
-        { error: 'Missing image data' }, 
-        { status: 400 }
-      )
-    }
-    
-    if (typeof base64Data !== 'string') {
-      return NextResponse.json(
-        { error: 'Image data must be a string' }, 
+        { error: 'Empty image data' }, 
         { status: 400 }
       )
     }
@@ -62,49 +96,7 @@ export async function POST(request) {
     // Creăm clientul Supabase
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    // Procesăm datele imaginii
-    let base64Content
-    try {
-      const parts = base64Data.split(',')
-      base64Content = parts[1] || parts[0] // Dacă nu există separator, folosim întregul string
-    } catch (error) {
-      console.error('Failed to split base64 data:', error)
-      return NextResponse.json(
-        { error: 'Failed to process image data' }, 
-        { status: 400 }
-      )
-    }
-    
-    if (!base64Content) {
-      return NextResponse.json(
-        { error: 'Invalid base64 content' }, 
-        { status: 400 }
-      )
-    }
-    
-    // Creăm buffer-ul
-    let imageBuffer
-    try {
-      imageBuffer = Buffer.from(base64Content, 'base64')
-    } catch (error) {
-      console.error('Failed to create buffer from base64:', error)
-      return NextResponse.json(
-        { error: 'Failed to process image buffer' }, 
-        { status: 400 }
-      )
-    }
-    
-    if (imageBuffer.length === 0) {
-      return NextResponse.json(
-        { error: 'Empty image data' }, 
-        { status: 400 }
-      )
-    }
-    
-    // Generăm un nume de fișier unic
-    const fileName = `magnet_${Date.now()}.jpg`
-    
-    console.log(`Uploading image "${fileName}" to Supabase bucket: magnet_images`)
+    console.log(`Uploading image "${fileName}" to Supabase bucket: magnet-images`)
     
     // Încărcăm imaginea în bucket
     try {
