@@ -273,53 +273,72 @@ export default function Custom() {
         setUploadProgress(((i + 1) / packageImages.length) * 100);
         
         try {
+          console.log(`Processing image ${i + 1}/${packageImages.length}...`);
+          
           // Convert base64 to blob
           const response = await fetch(img.fullImage);
           const blob = await response.blob();
           
+          console.log(`Image ${i + 1} blob size: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+          
+          let finalBlob = blob;
+          
           // Check blob size (should be under 5MB after compression)
           if (blob.size > 5 * 1024 * 1024) {
-            console.warn(`Image ${i + 1} is large (${(blob.size / 1024 / 1024).toFixed(2)}MB), compressing...`);
-            // If still too large, compress more aggressively
-            const compressedBlob = await compressImage(blob, 0.7);
-            
-            // Upload compressed version
-            const formData = new FormData();
-            formData.append('file', compressedBlob, `magnet-${i + 1}.jpg`);
-            
-            const uploadResponse = await fetch('/api/upload', {
-              method: 'POST',
-              body: formData
-            });
-            
-            if (!uploadResponse.ok) {
-              const errorData = await uploadResponse.json().catch(() => ({}));
-              throw new Error(errorData.error || `Failed to upload image ${i + 1}`);
+            console.log(`Image ${i + 1} is large, compressing...`);
+            try {
+              finalBlob = await compressImage(blob, 0.7);
+              console.log(`Compressed to ${(finalBlob.size / 1024 / 1024).toFixed(2)}MB`);
+            } catch (compressError) {
+              console.error('Compression failed, using original:', compressError);
+              finalBlob = blob;
             }
-            
-            const { url } = await uploadResponse.json();
-            uploadedImageUrls.push(url);
-          } else {
-            // Upload original
-            const formData = new FormData();
-            formData.append('file', blob, `magnet-${i + 1}.jpg`);
-            
-            const uploadResponse = await fetch('/api/upload', {
-              method: 'POST',
-              body: formData
-            });
-            
-            if (!uploadResponse.ok) {
-              const errorData = await uploadResponse.json().catch(() => ({}));
-              throw new Error(errorData.error || `Failed to upload image ${i + 1}`);
-            }
-            
-            const { url } = await uploadResponse.json();
-            uploadedImageUrls.push(url);
           }
+          
+          // Upload with timeout
+          const formData = new FormData();
+          formData.append('file', finalBlob, `magnet-${i + 1}.jpg`);
+          
+          console.log(`Uploading image ${i + 1}...`);
+          
+          const uploadResponse = await Promise.race([
+            fetch('/api/upload', {
+              method: 'POST',
+              body: formData
+            }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Upload timeout (30s)')), 30000)
+            )
+          ]);
+          
+          console.log(`Upload response status: ${uploadResponse.status}`);
+          
+          if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            console.error(`Upload failed with status ${uploadResponse.status}:`, errorText);
+            
+            let errorData;
+            try {
+              errorData = JSON.parse(errorText);
+            } catch {
+              errorData = { error: errorText || 'Unknown error' };
+            }
+            
+            throw new Error(errorData.error || `Upload failed with status ${uploadResponse.status}`);
+          }
+          
+          const result = await uploadResponse.json();
+          console.log(`Image ${i + 1} uploaded successfully:`, result.url);
+          
+          if (!result.url) {
+            throw new Error('No URL returned from upload');
+          }
+          
+          uploadedImageUrls.push(result.url);
+          
         } catch (uploadError) {
           console.error(`Error uploading image ${i + 1}:`, uploadError);
-          throw new Error(`Failed to upload image ${i + 1}: ${uploadError.message}`);
+          throw new Error(`Image ${i + 1}: ${uploadError.message}`);
         }
       }
       
@@ -365,8 +384,19 @@ export default function Custom() {
       router.push('/checkout');
       
     } catch (error) {
-      console.error('Error uploading images:', error);
-      showToast('Failed to upload images. Please try again.', 'error');
+      console.error('Error in handleAddToCart:', error);
+      
+      // Show specific error message
+      const errorMessage = error.message || 'Failed to upload images';
+      showToast(errorMessage, 'error');
+      
+      // Log for debugging
+      console.error('Full error details:', {
+        message: error.message,
+        stack: error.stack,
+        uploadedCount: uploadedImageUrls?.length || 0,
+        totalImages: packageImages.length
+      });
     } finally {
       setIsLoading(false);
       setUploadProgress(0);

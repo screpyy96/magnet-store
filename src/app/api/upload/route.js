@@ -116,11 +116,12 @@ export async function POST(request) {
     // Creăm clientul Supabase
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    console.log(`Uploading image "${fileName}" to Supabase bucket: magnet-images`)
+    console.log(`Uploading image "${fileName}" to Supabase bucket: magnet-images, size: ${(imageBuffer.length / 1024).toFixed(2)}KB`)
     
     // Încărcăm imaginea în bucket
     try {
-      const { error } = await supabase
+      const uploadStart = Date.now();
+      const { data, error } = await supabase
         .storage
         .from('magnet-images')
         .upload(fileName, imageBuffer, {
@@ -129,13 +130,31 @@ export async function POST(request) {
           upsert: true
         })
       
+      const uploadDuration = Date.now() - uploadStart;
+      console.log(`Upload completed in ${uploadDuration}ms`);
+      
       if (error) {
-        console.error('Supabase upload error:', error)
+        console.error('Supabase upload error:', {
+          message: error.message,
+          statusCode: error.statusCode,
+          error: error
+        })
+        
+        // Check if bucket exists
+        if (error.message?.includes('not found') || error.message?.includes('does not exist')) {
+          return NextResponse.json(
+            { error: 'Storage bucket "magnet-images" not found. Please create it in Supabase Dashboard.' }, 
+            { status: 500 }
+          )
+        }
+        
         return NextResponse.json(
           { error: `Failed to upload image: ${error.message}` }, 
           { status: 500 }
         )
       }
+      
+      console.log('Upload successful, data:', data);
       
       // Obținem URL-ul public
       const { data: urlData } = supabase
