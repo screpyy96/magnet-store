@@ -53,8 +53,8 @@ export default function ContactPage() {
     {
       icon: HiMail,
       title: 'Email',
-      details: 'contact@mysweetmagnets.co.uk',
-      action: 'mailto:contact@mysweetmagnets.co.uk',
+      details: 'orders@mysweetmagnets.co.uk',
+      action: 'mailto:orders@mysweetmagnets.co.uk',
       actionText: 'Send Email'
     },
     {

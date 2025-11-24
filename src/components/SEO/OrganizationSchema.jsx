@@ -18,7 +18,7 @@ export const OrganizationSchema = () => {
       "@type": "ContactPoint",
       "telephone": "+44 1234 567890",
       "contactType": "customer service",
-      "email": "hello@mysweetmagnets.co.uk",
+      "email": "orders@mysweetmagnets.co.uk",
       "availableLanguage": ["English"]
     },
     "address": {

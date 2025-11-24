@@ -197,7 +197,7 @@ export default function TermsPage() {
                 Copyright Infringement
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                If you believe that your intellectual property rights have been violated, please contact us at legal@mysweetmagnets.co.uk with detailed information about the alleged infringement.
+                If you believe that your intellectual property rights have been violated, please contact us at orders@mysweetmagnets.co.uk with detailed information about the alleged infringement.
               </p>
             </div>
           </div>
@@ -283,11 +283,11 @@ export default function TermsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">Legal Contact</h4>
-              <p className="opacity-90">legal@mysweetmagnets.co.uk</p>
+              <p className="opacity-90">orders@mysweetmagnets.co.uk</p>
             </div>
             <div>
               <h4 className="font-semibold mb-2">General Contact</h4>
-              <p className="opacity-90">hello@mysweetmagnets.co.uk</p>
+              <p className="opacity-90">orders@mysweetmagnets.co.uk</p>
             </div>
           </div>
         </motion.div>

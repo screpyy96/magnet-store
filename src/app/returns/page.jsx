@@ -31,7 +31,7 @@ export default function ReturnsPage() {
     {
       step: "1",
       title: "Contact Us",
-      description: "Email us at returns@mysweetmagnets.co.uk or use the return form in your account dashboard within 30 days of delivery."
+      description: "Email us at orders@mysweetmagnets.co.uk or use the return form in your account dashboard within 30 days of delivery."
     },
     {
       step: "2",
@@ -225,7 +225,7 @@ export default function ReturnsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">Email Us</h4>
-              <p className="opacity-90">returns@mysweetmagnets.co.uk</p>
+              <p className="opacity-90">orders@mysweetmagnets.co.uk</p>
             </div>
             <div>
               <h4 className="font-semibold mb-2">Live Chat</h4>

@@ -270,7 +270,7 @@ export default function PrivacyPage() {
           </p>
           <div className="space-y-2">
             <p className="text-gray-900 font-medium">
-              Email: privacy@mysweetmagnets.co.uk
+              Email: orders@mysweetmagnets.co.uk
             </p>
             <p className="text-gray-900 font-medium">
               Address: My Sweet Magnets Ltd, London, UK

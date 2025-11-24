@@ -61,7 +61,7 @@ export default function FAQPage() {
         {
           id: "ordering-3",
           question: "Can I order custom sizes?",
-          answer: "Yes! We offer custom sizes for special orders. Contact us at custom@mysweetmagnets.co.uk with your requirements and we'll provide a quote. Custom orders typically take 5-7 business days to process."
+          answer: "Yes! We offer custom sizes for special orders. Contact us at orders@mysweetmagnets.co.uk with your requirements and we'll provide a quote. Custom orders typically take 5-7 business days to process."
         },
         {
           id: "ordering-4",
@@ -108,7 +108,7 @@ export default function FAQPage() {
         {
           id: "account-2",
           question: "How do I contact customer service?",
-          answer: "We're here to help! Email us at hello@mysweetmagnets.co.uk or use our live chat feature (available 9am-5pm GMT). We typically respond within 2 hours during business hours."
+          answer: "We're here to help! Email us at orders@mysweetmagnets.co.uk or use our live chat feature (available 9am-5pm GMT). We typically respond within 2 hours during business hours."
         },
         {
           id: "account-3",
@@ -222,7 +222,7 @@ export default function FAQPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">Email Us</h4>
-              <p className="opacity-90">hello@mysweetmagnets.co.uk</p>
+              <p className="opacity-90">orders@mysweetmagnets.co.uk</p>
             </div>
             <div>
               <h4 className="font-semibold mb-2">Live Chat</h4>
