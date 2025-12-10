@@ -19,7 +19,7 @@
     "@reduxjs/toolkit": "^2.6.0",
     "@stripe/react-stripe-js": "^3.3.0",
     "@stripe/stripe-js": "^5.10.0",
-    "@supabase/ssr": "^0.1.0",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.53.0",
     "eslint-plugin-react": "^7.37.5",
     "framer-motion": "^12.4.10",
